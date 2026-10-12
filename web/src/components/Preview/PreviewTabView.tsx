@@ -184,7 +184,9 @@ export function PreviewTabView({ workspace, tabId, target, navKey, onPreviewId, 
   const stageRef = useRef<HTMLDivElement>(null)
   const frameBoxRef = useRef<HTMLDivElement>(null)
   const readyRef = useRef(false)
-  const readySinceLoadRef = useRef(false)
+  // When the page last reported ``ready``, and the timer judging the latest load.
+  const lastReadyAtRef = useRef(0)
+  const loadTimerRef = useRef<number | null>(null)
   const nextCommentRef = useRef(1)
   const stage = useElementSize(stageRef)
 
@@ -250,7 +252,7 @@ export function PreviewTabView({ workspace, tabId, target, navKey, onPreviewId, 
       switch (message.type) {
         case 'ready': {
           readyRef.current = true
-          readySinceLoadRef.current = true
+          lastReadyAtRef.current = performance.now()
           setReady(true)
           setInspectorMissing(false)
           setPath(message.path)
@@ -305,6 +307,7 @@ export function PreviewTabView({ workspace, tabId, target, navKey, onPreviewId, 
 
   useEffect(() => () => {
     if (agentTimerRef.current !== null) window.clearTimeout(agentTimerRef.current)
+    if (loadTimerRef.current !== null) window.clearTimeout(loadTimerRef.current)
   }, [])
 
   // Feedback taken back out of the composer returns to this tab's list.
@@ -335,13 +338,19 @@ export function PreviewTabView({ workspace, tabId, target, navKey, onPreviewId, 
   }, [comments, post])
 
   const onFrameLoad = () => {
-    window.setTimeout(() => {
-      if (!readySinceLoadRef.current) {
+    const loadedAt = performance.now()
+    // A page with the inspector answers ``hello`` with ``ready`` (its first
+    // ``ready`` came before ``load``). Only the newest load is judged: an
+    // earlier timer must not decide for a page that reloaded meanwhile.
+    post({ type: 'hello' })
+    if (loadTimerRef.current !== null) window.clearTimeout(loadTimerRef.current)
+    loadTimerRef.current = window.setTimeout(() => {
+      loadTimerRef.current = null
+      if (lastReadyAtRef.current < loadedAt) {
         readyRef.current = false
         setReady(false)
         setInspectorMissing(true)
       }
-      readySinceLoadRef.current = false
     }, READY_GRACE_MS)
   }
 
