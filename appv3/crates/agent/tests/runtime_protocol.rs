@@ -87,6 +87,45 @@ async fn custom_lead_agent_gets_the_runtime_and_memory_protocols() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn memory_is_frozen_for_the_whole_session() {
+    let root = root();
+    let pool = appv3_db::create_pool(root.join("frozen.db")).await.unwrap();
+    let ws = root.join("project");
+    std::fs::create_dir_all(&ws).unwrap();
+    let mock = Arc::new(MockProvider::new(vec![MockProvider::text("One."), MockProvider::text("Two.")]));
+    let provider: Arc<dyn LlmProvider> = mock.clone();
+    let p2 = provider.clone();
+    let factory: ProviderFactory = Arc::new(move |_, _| Ok(p2.clone()));
+    let agent = Agent::new(provider, "frozen", "You are a lead.", vec![], Some("mock:mock".into()));
+    let session = AgentSession::new(agent, None, Some(ws.display().to_string()), pool, factory, None);
+    let sid = uuid::Uuid::now_v7().to_string();
+    // A new page, not an edit: other tests share the memory directory.
+    let page = root.join("config").join("memory").join("frozen-late-page.md");
+
+    for (i, text) in ["first", "second"].into_iter().enumerate() {
+        session.handle_user_message(UserMessage { content: text.into(), session_id: sid.clone(), origin: "user".into(), ..Default::default() }).await.unwrap();
+        if let Some(mut sub) = store().attach(&sid) {
+            let _ = tokio::time::timeout(Duration::from_secs(10), async { while sub.next().await.is_some() {} }).await;
+        }
+        tokio::time::timeout(Duration::from_secs(10), session.wait_turn_finished()).await.expect("turn finishes");
+        if i == 0 {
+            std::fs::write(&page, "# Late page\n\nSaved after the first turn.\n").unwrap();
+        }
+    }
+    std::fs::remove_file(&page).unwrap();
+
+    let calls = mock.calls.lock().unwrap();
+    let system = |i: usize| match &calls[i].0[0] {
+        ChatMessage::System { content, .. } => content.clone().unwrap_or_default(),
+        other => panic!("not a system prompt: {other:?}"),
+    };
+    assert_eq!(calls.len(), 2);
+    assert!(system(0).contains("- Use Bun, not npm."));
+    assert!(!system(1).contains("frozen-late-page"), "a page saved mid-session must not reach this session's prompt");
+    assert_eq!(system(0), system(1), "the system prompt must not change between turns");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn delegated_agent_gets_read_only_memory_rules() {
     let prompt = system_prompt("explorer", "You are an explorer.", true).await;
     at(&prompt, prompts::runtime_protocol());

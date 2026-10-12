@@ -1206,6 +1206,10 @@ OpenAgentd carries context across sessions via rolling-window summarization.
   preferences, corrections, and durable facts about the user (to `preferences.md`,
   `user.md`, or topic pages) in the same turn without asking, and says what it saved.
   Delegated agents read memory but do not write it.
+- **Frozen per-session memory** `[v3.10.0]` — the memory rules are always added for the
+  lead agent, and the `<openagentd_memory>` block is read once on a session's first turn
+  and reused unchanged, so the system prompt stays byte-identical and prefix caching holds.
+  Pages saved mid-session appear from the next session.
 - **Runtime protocol for every agent** `[v3.3.0]` — rules for instruction sources,
   secrets, workspace and git safety, and memory are added by the runtime, so agents
   with a custom prompt in their agent file get them too.
