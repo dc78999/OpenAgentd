@@ -48,7 +48,10 @@ export function confirmedIdSet(blocks: ContentBlock[]): Set<string> {
  * live copy is a stale duplicate of a row that has since been confirmed.
  * Drop it instead of trusting every upstream reconciliation path
  * (loadSession, reconcileTurnTail, the SSE reducer) to have already removed
- * it.
+ * it. A user bubble is also matched by text, but only while it still carries
+ * its optimistic `user-<ts>` id (the POST has not answered): one with a
+ * server id is matched by id alone, or a steer repeating an earlier message
+ * ("continue", "yes") vanished from the transcript while its turn ran.
  */
 export function liveBlockTail(
   blocks: ContentBlock[],
@@ -58,7 +61,7 @@ export function liveBlockTail(
   const confirmedIds = confirmedIdSet(blocks)
   return currentBlocks.filter((b) => {
     if (confirmedIds.has(b.id)) return false
-    if (b.type === 'user') {
+    if (b.type === 'user' && b.id.startsWith('user-')) {
       const existsInConfirmed = blocks.some(
         (confirmed) =>
           confirmed.type === 'user' &&

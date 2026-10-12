@@ -90,6 +90,26 @@ describe("mergeBlocks", () => {
     expect(result).toBe(blocks);
   });
 
+  it("keeps a live steer whose text an earlier confirmed message already used", () => {
+    // A steer read mid-turn lands in currentBlocks under its server id. Matching
+    // it to the confirmed transcript by text hid it for as long as the turn ran
+    // whenever the session had said "continue" or "yes" before.
+    const blocks: ContentBlock[] = [
+      { id: "srv-1", type: "user", content: "continue" },
+      { id: "a-1", type: "text", content: "working" },
+    ];
+    const currentBlocks: ContentBlock[] = [{ id: "srv-2", type: "user", content: "continue" }];
+
+    expect(mergeBlocks(blocks, currentBlocks).map((b) => b.id)).toEqual(["srv-1", "a-1", "srv-2"]);
+  });
+
+  it("still drops an optimistic user bubble once its persisted row has loaded", () => {
+    const blocks: ContentBlock[] = [{ id: "srv-1", type: "user", content: "hello" }];
+    const currentBlocks: ContentBlock[] = [{ id: "user-1700000000000", type: "user", content: "hello" }];
+
+    expect(mergeBlocks(blocks, currentBlocks)).toBe(blocks);
+  });
+
   it("dedupes a tool card that is live-in-progress in currentBlocks and already reconciled into blocks", () => {
     // End-to-end of the initTool -> mergeBlocks loop: a live tool block's id
     // is its toolCallId (initTool), and parseAgentBlocks gives the same
