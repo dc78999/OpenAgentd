@@ -419,8 +419,17 @@ impl AgentSession {
         }
         match db::get_pending_question(&self.pool, &sid).await {
             Ok(Some(q)) => {
-                if let Err(e) = db::resolve_pending_question(&self.pool, &q.id, normalize_question_status(reason), None).await {
-                    tracing::warn!("dismiss_pending_question_failed error={}", e);
+                let status = normalize_question_status(reason);
+                match db::resolve_pending_question(&self.pool, &q.id, status, None).await {
+                    Ok(Some(_)) => {
+                        // Tell every connected client, or the card stays open
+                        // and answerable (the answer would 409).
+                        let api_sid = db::codec::api_uuid(&db::codec::db_id(&sid));
+                        let qid = db::codec::api_uuid(&q.id);
+                        store().push_event(&api_sid, &events::question_dismissed(&qid, &api_sid, status), true);
+                    }
+                    Ok(None) => {}
+                    Err(e) => tracing::warn!("dismiss_pending_question_failed error={}", e),
                 }
             }
             Ok(None) => {}
