@@ -135,11 +135,19 @@ make dev       # backend on :8000 + web UI on http://localhost:5173
 
 | A conversation that can act | A workspace that stays in view |
 | --- | --- |
-| ![Split view with agent activity](documents/assets/readme/cockpit-split-view.png) | ![Coding workspace with files and diffs](documents/assets/readme/coding-workspace.png) |
+| ![A lead agent combining reports from explorer and researcher helpers](documents/assets/readme/cockpit-split-view-light.png) | ![Coding workspace with the agent's steps and a Git panel of changed files](documents/assets/readme/coding-workspace-light.png) |
 
 | Inspect changes | Keep an eye on local usage |
 | --- | --- |
-| ![Inline diff inspector](documents/assets/readme/coding-diff-view.png) | ![Telemetry summary](documents/assets/readme/telemetry-summary.png) |
+| ![Inline diff inspector](documents/assets/readme/coding-diff-view-light.png) | ![Telemetry summary](documents/assets/readme/telemetry-summary-light.png) |
+
+| Command and scheduling | Todos and terminal |
+| --- | --- |
+| ![Command palette](documents/assets/readme/command-palette-light.png) ![Scheduler panel](documents/assets/readme/scheduler-light.png) | ![Todos panel](documents/assets/readme/todos-panel-light.png) ![Terminal emulator](documents/assets/readme/terminal-emulator-light.png) |
+
+| Provider and security settings | MCP settings |
+| --- | --- |
+| ![Providers settings](documents/assets/readme/settings-providers-light.png) ![Sandbox settings](documents/assets/readme/settings-sandbox-light.png) | ![MCP settings](documents/assets/readme/settings-mcp-light.png) |
 
 ### Built for the whole loop
 
