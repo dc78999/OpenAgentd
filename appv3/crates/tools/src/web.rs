@@ -348,8 +348,10 @@ fn wrap_body(html: &str) -> Cow<'_, str> {
 }
 
 /// `_html_to_markdown`: `trafilatura.extract(html, output_format="markdown",
-/// include_tables=True, include_links=True)`, redone with `html2txt` when the
-/// extraction is empty or dropped the page's code blocks.
+/// include_tables=True, include_links=True)`. Pages the extractor cannot read
+/// as an article (landing pages, app shells) fall back to a structural
+/// conversion of the whole body, so headings, lists and links survive; the
+/// flat `html2txt` dump is the last resort.
 pub fn html_to_markdown(html: &str) -> String {
     let html = wrap_body(html);
     let extracted = extract_markdown(&html);
@@ -358,12 +360,87 @@ pub fn html_to_markdown(html: &str) -> String {
         Some(e) => e.trim().is_empty() || (html.to_lowercase().contains("<pre") && !e.contains("```")),
     };
     if dropped {
+        let structured = structured_markdown(&html);
+        if !structured.is_empty() {
+            return structured;
+        }
         let text = html2txt(&html);
         if !text.is_empty() {
             return text;
         }
+    } else if let Some(e) = &extracted {
+        // Article extraction keeps paragraphs and drops everything else on a
+        // page that is not an article. If the page has headings the extraction
+        // lost and the structural conversion holds much more, prefer it.
+        if e.chars().count() >= MIN_EXTRACTED_SIZE && !has_heading(e) {
+            let structured = structured_markdown(&html);
+            if has_heading(&structured) && e.chars().count() * 10 < structured.chars().count() * 7 {
+                return structured;
+            }
+        }
     }
     extracted.unwrap_or_default()
+}
+
+fn has_heading(md: &str) -> bool {
+    md.lines().any(|l| l.starts_with("# ") || l.starts_with("## ") || l.starts_with("### "))
+}
+
+/// The whole body as Markdown, minus chrome (navigation, footers, asides,
+/// consent banners) and non-content tags.
+fn structured_markdown(html: &str) -> String {
+    let doc = parse_html(html);
+    let body_sel = scraper::Selector::parse("body").unwrap();
+    let Some(body) = doc.select(&body_sel).next() else {
+        return String::new();
+    };
+    let mut kept = String::new();
+    clean_serialize(&body, &mut kept);
+    let md = markdown_converter().convert(&kept).unwrap_or_default();
+    // Empty links (icon-only anchors) and whitespace-only lines are noise.
+    static EMPTY_LINK: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\[\]\([^)]*\)").unwrap());
+    static BLANKS: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\n[ \t]*\n(?:[ \t]*\n)+").unwrap());
+    let md = EMPTY_LINK.replace_all(&md, "");
+    let md = BLANKS.replace_all(&md, "\n\n");
+    md.trim().nfc().collect()
+}
+
+/// Serialises `node`'s children, dropping what `basic_clean_removes` and
+/// interactive/navigation elements cover.
+fn clean_serialize(node: &scraper::ElementRef<'_>, out: &mut String) {
+    for child in node.children() {
+        match child.value() {
+            scraper::Node::Text(t) => out.push_str(&escape_text(t)),
+            scraper::Node::Element(e) => {
+                if basic_clean_removes(e) || matches!(e.name(), "nav" | "head" | "form" | "select" | "dialog" | "noscript" | "source" | "canvas" | "video" | "audio") {
+                    continue;
+                }
+                // Images only help as captioned references; inline data: URIs
+                // and tracking pixels would drown the page.
+                if e.name() == "img" && (e.attr("alt").is_none_or(|a| a.trim().is_empty()) || e.attr("src").is_none_or(|s| s.is_empty() || s.starts_with("data:"))) {
+                    continue;
+                }
+                let Some(el) = scraper::ElementRef::wrap(child) else { continue };
+                out.push('<');
+                out.push_str(e.name());
+                for (k, v) in e.attrs() {
+                    if matches!(k, "href" | "src" | "alt" | "title" | "colspan" | "rowspan" | "class") {
+                        out.push_str(&format!(" {k}=\"{}\"", v.replace('&', "&amp;").replace('"', "&quot;").replace('<', "&lt;")));
+                    }
+                }
+                out.push('>');
+                if !matches!(e.name(), "br" | "hr" | "img" | "input" | "meta" | "link") {
+                    clean_serialize(&el, out);
+                    out.push_str(&format!("</{}>", e.name()));
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+fn escape_text(t: &str) -> String {
+    t.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
 }
 
 /// `_html_to_text`: `trafilatura.html2txt` — the whole body as one line.
@@ -1080,5 +1157,35 @@ verify the installation by printing its version number as shown.</p>
         // A page this short ends in trafilatura's baseline: v2 returns the body's text runs.
         assert_eq!(md, "Hi\nthere\nlink");
         assert!(process(b"\x89PNG\x00\x00", Some("image/png"), "raw").is_err());
+    }
+
+    /// A landing page: the article extractor keeps only the paragraphs, so the
+    /// structural conversion must supply the headings and links.
+    fn landing_page() -> String {
+        let section = |n: usize| {
+            format!(
+                "<section><h2>Feature {n} heading</h2><p>Feature {n} explains in a full sentence what the product does for you and why that matters to a team.</p><a href=\"/f{n}\">Learn more {n}</a></section>"
+            )
+        };
+        let sections: String = (1..=5).map(section).collect();
+        format!(
+            "<html><head><title>T</title></head><body><nav><a href=\"/nav-only\">NavOnlyLink</a></nav><div><h1>The Product Headline</h1>{sections}</div><footer>FooterOnlyText</footer><script>track()</script></body></html>"
+        )
+    }
+
+    #[test]
+    fn landing_pages_keep_headings_and_links() {
+        let md = html_to_markdown(&landing_page());
+        assert!(md.contains("# The Product Headline"), "{md}");
+        assert!(md.contains("## Feature 3 heading"), "{md}");
+        assert!(md.contains("[Learn more 2](/f2)"), "{md}");
+        assert!(!md.contains("NavOnlyLink") && !md.contains("FooterOnlyText") && !md.contains("track()"), "{md}");
+    }
+
+    #[test]
+    fn structural_fallback_drops_data_uri_images_and_empty_links() {
+        let html = "<html><body><a href=\"/\"><img src=\"data:image/svg+xml,%3csvg%3e\" alt=\"Logo\"></a><img src=\"/pixel.gif\"><h1>Only a heading</h1></body></html>";
+        let md = structured_markdown(html);
+        assert_eq!(md, "# Only a heading");
     }
 }

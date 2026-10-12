@@ -1459,6 +1459,10 @@ MCP.
   anti-bot protection (Cloudflare, DataDome, PerimeterX, Reddit, Vercel, AWS
   WAF), `web_fetch` returns a clear "Browser verification required" error
   that names the vendor, instead of the interstitial's text.
+- **Structured Markdown for landing pages** `[v3.10.0]` — `web_fetch` keeps
+  headings, lists and links on landing and app-shell pages, where article
+  extraction used to return bare paragraphs or one flat line of text. Navigation,
+  footers and inline data-URI images are left out. Articles convert as before.
 - **50k character read limit** `[v2.0.0]` — expanded `read` tool context limit to
   50,000 characters for reviewing larger source files in a single pass.
 - **Symbol outline mode for `read` tool** `[v2.4.0]` — `read` supports `outline=True`
