@@ -379,6 +379,12 @@ pub fn serialize_agent(agent: &appv3_agent::Agent, workspace: Option<&str>, cust
         }
     }
     // The session injects `preview` for coding workspaces (see `session.rs`).
+    // `send_to_workspace` is injected for leads unless Settings turn it off.
+    if appv3_core::runtime_settings::workspace_messages_enabled() && !tools.iter().any(|(x, _)| x == "send_to_workspace") {
+        if let Some(def) = appv3_tools::contract_definition("send_to_workspace") {
+            tools.push(tool_desc(&def));
+        }
+    }
     if let Some(ws) = workspace.filter(|w| !w.is_empty()) {
         if settings().workspace_mode(Some(Path::new(ws))) == "coding" && !tools.iter().any(|(x, _)| x == appv3_agent::tools::preview::PREVIEW_TOOL) {
             use appv3_tools::Tool;
