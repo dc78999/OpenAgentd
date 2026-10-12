@@ -432,7 +432,10 @@ run from the terminal (the native Rust binary since v3.0.0).
   desktop window instead of globally across all open windows `[v1.66.1]`. On
   macOS, each desktop window now updates its native title to the active coding
   workspace name or session title so the Dock window list distinguishes
-  open windows `[v1.66.1]`. Fixed a bug where switching one window's CLI server
+  open windows `[v1.66.1]`. Window titles read `workspace - session title`
+  (just the workspace until the session is named, long session titles
+  shortened), so the Window menu, Mission Control, and the Windows/Linux
+  taskbar tell windows apart `[v3.10.0]`. Fixed a bug where switching one window's CLI server
   could still redirect other open windows onto the same server: the backend
   now targets its "backend ready" notification at the switching window only,
   and the frontend listens for it on a per-window channel instead of the
@@ -1050,7 +1053,7 @@ agent against it.
   answered, and a click opens the session. The same count badges the app icon
   in the dock (macOS and Linux) and on iOS once notifications are allowed,
   and prefixes the browser tab title, e.g.
-  `(2) Fix updater restart`.
+  `(2) app - Fix updater restart`.
 - **Scheduled in the sidebar** `[v3.0.0]` — the bottom of the coding sidebar
   lists the next five enabled scheduled tasks, soonest first, each with its next
   run time (`18:05`, `Wed 09:00`, or `20/03`). Clicking a task opens the

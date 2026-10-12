@@ -3,6 +3,9 @@ import { getPlatform } from '@/hooks/use-platform'
 
 const APP_NAME = 'OpenAgentd'
 
+/** Longest session title kept in a window title (the Window menu and taskbar get unwieldy past this). */
+const MAX_SESSION_TITLE_LEN = 60
+
 export function buildDesktopWindowTitle(options: {
   workspace?: string | null
   sessionTitle?: string | null
@@ -16,24 +19,31 @@ export function buildDesktopWindowTitle(options: {
 }
 
 function baseTitle(options: { workspace?: string | null; sessionTitle?: string | null; workspaceName?: string | null }): string {
-  const title = options.sessionTitle?.trim()
-  if (title) return title
-  const name = options.workspaceName?.trim()
-  if (name) return name
-  if (options.workspace) {
-    return workspaceLabel(options.workspace)
-  }
-  return APP_NAME
+  const title = truncate(options.sessionTitle?.trim() ?? '')
+  const name = options.workspaceName?.trim() || (options.workspace ? workspaceLabel(options.workspace) : '')
+  if (name && title && name !== title) return `${name} - ${title}`
+  return title || name || APP_NAME
 }
 
+function truncate(text: string): string {
+  return text.length > MAX_SESSION_TITLE_LEN ? `${text.slice(0, MAX_SESSION_TITLE_LEN - 1).trimEnd()}…` : text
+}
+
+let lastNativeTitle: string | null = null
+
 /**
- * Sync the browser tab title from the current session/workspace state.
+ * Sync the window title from the current session/workspace state, as
+ * ``"<workspace> - <session title>"``.
  *
- * Only updates `document.title` — we intentionally do NOT call
- * `NSWindow.setTitle` on macOS Tauri because it triggers an AppKit
- * titlebar relayout that resets the traffic-light vertical position.
- * The native window title stays as "OpenAgentd" (set at build time in
- * `configure_window_chrome`) and is invisible to the user inside the app.
+ * Always updates `document.title`. In the desktop app it also sets the native
+ * window title, which is what the macOS Window menu, Mission Control and the
+ * Windows/Linux title bar and taskbar show — the way to tell windows apart.
+ *
+ * macOS caveat: `NSWindow.setTitle` used to knock the traffic lights off
+ * centre (see 9fcc7111). tao >= 0.37 re-applies the traffic-light inset after
+ * `setTitle`, so this is expected to be safe; if the buttons shift, that fix
+ * has regressed. The native call is skipped when the title is unchanged so
+ * streaming/no-op updates never trigger a title-bar relayout.
  */
 export function syncDesktopWindowTitle(options: {
   workspace?: string | null
@@ -43,6 +53,20 @@ export function syncDesktopWindowTitle(options: {
 }): void {
   const title = buildDesktopWindowTitle(options)
   if (typeof document !== 'undefined') document.title = title
+  void syncNativeWindowTitle(title)
+}
+
+async function syncNativeWindowTitle(title: string): Promise<void> {
+  if (!getPlatform().isTauri || title === lastNativeTitle) return
+  lastNativeTitle = title
+  try {
+    const { getCurrentWindow } = await import('@tauri-apps/api/window')
+    await getCurrentWindow().setTitle(title)
+  } catch (err) {
+    // Retry on the next change; a title is never worth an error.
+    lastNativeTitle = null
+    console.debug('window title update failed', err)
+  }
 }
 
 /**
