@@ -606,7 +606,7 @@ run from the terminal (the native Rust binary since v3.0.0).
     "Read before the next step" and held ones "Sends when this turn ends".
   - Stop & send waits for the stopped turn, including a running tool, to
     wind down, then sends; steers the agent had not read go out first, after
-    the stopped turn `[v3.12.0]`.
+    the stopped turn `[v3.11.0]`.
   - Queued messages reach the agent in the order they go out: steers first,
     then held messages, one turn each. A steer is read before the running
     turn's next step, or starts the next turn if that turn makes no further
@@ -1918,7 +1918,7 @@ The same HTTP + SSE API drives the desktop, browser, and mobile clients. Embed i
   stream, completed and stopped turns notify clients to sync and update session
   states globally, generated titles update every session surface, and native
   notifications no longer depend on the originating chat being open.
-- **One stream for every window** `[v3.10.1]` — the windows of one app share a
+- **One stream for every window** `[v3.11.0]` — the windows of one app share a
   single connection to the backend: one window reads
   `GET /api/events/stream?client_id=…`, which carries the global events and,
   once a client lists them with `PUT /api/events/subscriptions/{client_id}`,
