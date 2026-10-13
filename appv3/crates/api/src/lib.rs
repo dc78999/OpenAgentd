@@ -5,6 +5,7 @@ pub mod config_watch;
 pub mod error;
 pub mod fileresp;
 pub mod middleware;
+pub mod mux;
 pub mod observability;
 pub mod providers;
 pub mod routes;

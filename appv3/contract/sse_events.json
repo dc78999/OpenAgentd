@@ -37,6 +37,8 @@
     "workspace_files_changed",
     "config_changed",
     "mcp_status_changed",
-    "lsp_install_required"
+    "lsp_install_required",
+    "session_event",
+    "session_stream_end"
   ]
 }

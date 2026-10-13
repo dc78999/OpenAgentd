@@ -6,6 +6,7 @@ import { apiBaseUrl, apiUrl } from '../base-url'
 import { apiAuthHeaders, withTokenParam } from '../auth'
 import { readSSE } from '../sse'
 import type { SSECallbacks } from '../sse'
+import { sharedAgentStream } from '../stream-hub'
 import { parseDetailOrThrow } from './_shared'
 import type {
   SessionDetailResponse,
@@ -126,6 +127,7 @@ export async function cancelQueuedMessage(sessionId: string, messageId: string):
 }
 
 export function agentStream(sessionId: string, callbacks: SSECallbacks, signal?: AbortSignal): void {
+  if (sharedAgentStream(sessionId, callbacks, signal)) return
   const url = `${apiBaseUrl()}/agent/${encodeURIComponent(sessionId)}/stream`
   fetch(url, { signal, headers: apiAuthHeaders(url) })
     .then((res) => {

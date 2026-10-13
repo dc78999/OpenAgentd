@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
-import { sharedGlobalEventStream } from '@/api/shared-global-events'
+import { sharedGlobalEventStream } from '@/api/stream-hub'
 import { onApiBaseUrlChange } from '@/api/base-url'
 import { backgroundSuspendsSockets } from '@/hooks/use-platform'
 import { sendDesktopNotification } from '@/lib/desktop-notifications'
@@ -87,6 +87,7 @@ export async function handleGlobalEvent(
   currentConnectionGeneration: () => number,
 ): Promise<boolean> {
   if (connectionGeneration !== currentConnectionGeneration() || !data || typeof data !== 'object') return false
+  if (isSessionStreamFrame(type)) return false
   const event = data as Record<string, unknown>
 
   if (type === 'session_turn_started') {
@@ -289,6 +290,11 @@ export async function handleGlobalEvent(
   }
 
   return false
+}
+
+/** Never reaches here: the stream hub routes these to the session that asked. */
+function isSessionStreamFrame(type: string): boolean {
+  return type === 'session_event' || type === 'session_stream_end'
 }
 
 export async function reconcileCurrentSession(
