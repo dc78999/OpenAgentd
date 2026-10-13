@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
-import { setupServer } from 'msw/node'
+import { setupServer } from '@/__tests__/msw'
 
 import { cleanup } from '@testing-library/react'
 import { ToastStack } from '@/components/ToastStack'

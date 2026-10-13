@@ -1,0 +1,77 @@
+name: Known issue (maintainers)
+description: Track a confirmed product issue publicly. To report a new problem, use Bug report.
+labels: ["bug", "known issue"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This form is for maintainers tracking a confirmed issue. To report something new, go back and choose **Bug report**.
+
+        Security vulnerabilities must go through [GitHub Security Advisories](https://github.com/lthoangg/OpenAgentd/security/advisories/new), never a public known issue.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Maintainer checklist
+      options:
+        - label: This issue is confirmed or reliably reproducible.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: A short, factual description of the issue.
+    validations:
+      required: true
+
+  - type: input
+    id: versions
+    attributes:
+      label: Affected versions
+      placeholder: v3.9.0 to v3.10.0
+    validations:
+      required: true
+
+  - type: input
+    id: surface
+    attributes:
+      label: Affected surface
+      description: For example, the desktop app, the CLI server, the web UI, the iOS app, coding mode, a provider, or the docs.
+    validations:
+      required: true
+
+  - type: textarea
+    id: symptoms
+    attributes:
+      label: Symptoms
+      description: What users see.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround
+      description: Write "None known" if there isn't one.
+    validations:
+      required: true
+
+  - type: textarea
+    id: fix-direction
+    attributes:
+      label: Expected fix direction
+      description: Suspected cause, likely files, or an acceptable shape for the fix.

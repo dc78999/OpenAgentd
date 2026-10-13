@@ -368,12 +368,15 @@ explicitly.
   - The loopback OAuth callback page sends `Server: openagentd` instead of
     `BaseHTTP/0.6 Python/3.x`.
   - Plugin disconnect removes only that plugin's token dir.
-- **Documents (`read`, `web_fetch`):** no deviation. v3 uses the `anydoc`
-  crate that v2's `firecrawl-anydoc` wheel wraps, at the same version, with
-  its PDF engine pinned to the wheel's (`pdf-inspector` 1.14.2). Output is
-  byte-identical, and the encrypted / needs-OCR → vision fallback paths
-  match. Error hints use anydoc's own texts, which are the Python exception
-  strings.
+- **Documents (`read`, `web_fetch`):** v3 uses the `anydoc` crate that v2's
+  `firecrawl-anydoc` wheel wraps, at the same version. Its PDF engine was
+  pinned to the wheel's (`pdf-inspector` 1.14.2) for byte-identical output,
+  then moved to 1.25.2 once v2 parity stopped being a goal. PDF text now
+  differs from v2: sub/superscripts render as `<sub>`/`<sup>`, words split
+  by line-end hyphens are rejoined, code listings are fenced, and some
+  multi-column reading order is fixed. DOCX output, the encrypted /
+  needs-OCR → vision fallback paths, and the error hints (anydoc's own
+  texts, which are the Python exception strings) are unchanged.
 - **`web_fetch` HTML:** v2's control flow is ported exactly, with the
   `trafilatura` crate (a port of go-trafilatura) standing in for Python
   trafilatura: main-content extraction, a fallback to `html2txt` when the

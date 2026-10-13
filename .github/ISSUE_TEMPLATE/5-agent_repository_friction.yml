@@ -1,0 +1,62 @@
+name: Agent / repository friction
+description: Capture repeatable contributor or coding-agent workflow friction in this repository
+labels: ["devex"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for friction when working on the OpenAgentd codebase, such as slow checks, missing instructions, or tooling that trips up contributors or coding agents. For product bugs, go back and choose **Bug report**.
+
+        Security vulnerabilities must be reported privately through [GitHub Security Advisories](https://github.com/lthoangg/OpenAgentd/security/advisories/new), not here.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched [existing issues](https://github.com/lthoangg/OpenAgentd/issues?q=is%3Aissue) and this hasn't been reported.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true
+
+  - type: textarea
+    id: blocked-workflow
+    attributes:
+      label: Blocked workflow
+      description: What contributor or agent task was harder, slower, or less reliable than it should be?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Commands, files, prompts, or steps that show the friction. Remove secrets and personal paths.
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Predicted impact
+      description: Estimated cost in time, reliability, security, or contributor reach, and who is affected.
+
+  - type: textarea
+    id: completion-proof
+    attributes:
+      label: Proposed completion proof
+      description: What command, manual scenario, or observable outcome would prove this is resolved?
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome review
+      description: Fill in after the work is attempted or done, with the actual result, any remaining limitation, and links to PRs or issues.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Logs, screenshots, related files, or links. Remove sensitive data first.

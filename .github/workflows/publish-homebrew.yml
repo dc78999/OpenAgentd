@@ -70,8 +70,8 @@ jobs:
 
           cat > homebrew-tap/Formula/openagentd.rb <<FORMULA
           class Openagentd < Formula
-            desc "On-machine AI assistant with a web cockpit"
-            homepage "https://github.com/lthoangg/openagentd"
+            desc "Local coding agent server and CLI"
+            homepage "https://openagentd.dev"
             version "${VERSION}"
             license "Apache-2.0"
 

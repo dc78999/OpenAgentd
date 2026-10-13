@@ -236,6 +236,24 @@ async fn http_api_end_to_end() {
     let text: String = events.iter().filter(|(e, _)| e == "message").filter_map(|(_, d)| d["text"].as_str()).collect();
     assert_eq!(text, "Hello from mock.", "{events:?}");
 
+    // ── session streams multiplexed onto the global stream ──────────────
+    let c_ref = &c;
+    let put = |client: &str, body: Value| {
+        let uri = format!("/api/events/subscriptions/{client}");
+        async move { c_ref.json("PUT", &uri, Some(body)).await }
+    };
+    assert_eq!(put("e2e-gone", json!({"subs": []})).await.0, StatusCode::NOT_FOUND);
+    let (_mux, _guard) = appv3_api::mux::register("e2e-client");
+    assert_eq!(put("e2e-client", json!({"subs": [{"id": "a b", "session_id": sid}]})).await.0, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(put("e2e-client", json!({"subs": [{"id": "s", "session_id": sid}, {"id": "s", "session_id": sid}]})).await.0, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(put("e2e-client", json!({})).await.0, StatusCode::UNPROCESSABLE_ENTITY);
+    let (st, v) = put("e2e-client", json!({"subs": [{"id": "s", "session_id": sid}]})).await;
+    assert_eq!((st, v["active"].clone()), (StatusCode::OK, json!(1)), "{v}");
+    let (st, v) = put("e2e-client", json!({"subs": []})).await;
+    assert_eq!((st, v["active"].clone()), (StatusCode::OK, json!(0)), "{v}");
+    let (st, _) = c.json("GET", "/api/events/stream?client_id=a%20b", None).await;
+    assert_eq!(st, StatusCode::BAD_REQUEST);
+
     let mut history = Value::Null;
     for _ in 0..50 {
         let (st, v) = c.json("GET", &format!("/api/agent/{sid}/history"), None).await;

@@ -1,0 +1,54 @@
+name: Roadmap item
+description: Planned or considered future work with a defined scope
+labels: ["enhancement", "roadmap"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Roadmap items are scoped proposals. For a loose idea or a single improvement, go back and choose **Feature request**.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched [existing issues](https://github.com/lthoangg/OpenAgentd/issues?q=is%3Aissue) for a duplicate or a related roadmap item.
+          required: true
+        - label: I checked the [feature catalogue](https://github.com/lthoangg/OpenAgentd/blob/main/documents/docs/features.md), and this isn't already shipped.
+          required: true
+
+  - type: textarea
+    id: user-value
+    attributes:
+      label: User value
+      description: What workflow does this unlock, and who benefits?
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Proposed scope
+      description: What does the first useful version include?
+    validations:
+      required: true
+
+  - type: textarea
+    id: non-goals
+    attributes:
+      label: Non-goals
+      description: What should explicitly stay out of scope?
+
+  - type: textarea
+    id: design-notes
+    attributes:
+      label: Design notes and open questions
+      description: Trade-offs, dependencies, risks, or decisions needed before implementation.
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance sketch
+      description: How would we know this is done?
+    validations:
+      required: true

@@ -21,8 +21,6 @@
 - [ ] Prompt, skill, or agent-instruction behavior
 - [ ] None of the above
 
-<!-- State the selected validation lane (tiny / normal / high-risk) and any applicable policy checks. -->
-
 ## Manual scenarios / viewport checks
 
 <!-- List manual scenarios run, or N/A. For web UI changes: narrow (<=768px) result and wide result. -->
@@ -38,9 +36,9 @@
 ## Checklist
 
 - [ ] I kept this PR focused on one logical change.
-- [ ] I updated docs where needed.
+- [ ] I updated docs where needed, including `documents/docs/features.md` for shipped behavior.
 - [ ] I added or updated tests where needed.
-- [ ] I followed the applicable checks in `documents/docs/contributing/change-policy.md`.
+- [ ] I ran `make verify`, or the focused `verify-*` targets for the surfaces I changed (see `CONTRIBUTING.md`).
 - [ ] I removed secrets, tokens, personal data, and unrelated generated files.
 
 Fixes #

@@ -184,15 +184,8 @@ Tests use Bun test + Happy DOM. Test store logic and pure utils directly; avoid 
 2. **Branch naming:** `feat/<topic>`, `fix/<topic>`, `docs/<topic>`, `refactor/<topic>`.
 3. **Before opening a PR:** run the applicable focused checks, then run `make verify`. Run `make verify-native` as well when desktop or mobile Rust code changes and the required native dependencies are available.
 4. **Commit style:** [Conventional Commits](https://www.conventionalcommits.org/) — `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`.
-5. **PR description:**
-
-   ```
-   ## Changes
-   ## Why
-   ## Testing
-   Fixes #<issue>
-   ```
-
+5. **PR description:** fill in the pull request template: what changed, why,
+   the exact test commands you ran, risk flags, and `Fixes #<issue>`.
 6. Keep PRs focused — one logical change per PR.
 
 ---
@@ -202,19 +195,25 @@ Tests use Bun test + Happy DOM. Test store logic and pure utils directly; avoid 
 Use [Discord](https://discord.gg/cz6GQHQUMg) or the [Facebook Group](https://www.facebook.com/groups/1256361676707935) for community chat, questions, and general discussion.
 
 Use GitHub issues for bugs, known issues, feature requests, and roadmap discussion.
-The templates follow the same pattern used by large open-source projects: ask
-for reproducible facts, link/remind about conduct and private security reporting,
-and avoid mandatory Code of Conduct agreement checkboxes.
+Issue forms ask for reproducible facts (version, how you run OpenAgentd, OS,
+model, and logs), remind you about conduct and private security reporting, and
+avoid mandatory Code of Conduct agreement checkboxes. Blank issues are disabled.
 
 GitHub issues are the roadmap; shipped capabilities belong in
 [`documents/docs/features.md`](documents/docs/features.md).
 
-- **Bugs / known issues:** use the Bug report template. Confirmed known issues
-  are labeled `known issue` by maintainers and stay out of the roadmap page.
+- **Bugs:** use the Bug report form. Its Logs field explains where the log
+  files are on each OS.
+- **Known issues:** maintainers track confirmed problems with the Known issue
+  form (labels `bug` + `known issue`); they stay out of the roadmap page.
 - **Features:** use the Feature request template. UI changes and new core
   features need issue discussion before implementation.
+- **Documentation:** use the Documentation form for wrong, missing, or unclear
+  docs.
 - **Roadmap items:** use `roadmap` plus `enhancement`. When a roadmap item ships,
   close the issue and add the shipped feature to `documents/docs/features.md`.
+- **Contributor or coding-agent friction:** use the Agent / repository friction
+  form (label `devex`).
 - **Security vulnerabilities:** do not open a public issue. Use GitHub Security
   Advisories as described in [SECURITY.md](SECURITY.md).
 
@@ -228,9 +227,13 @@ GitHub issues are the roadmap; shipped capabilities belong in
 | `roadmap` | Planned or considered roadmap item |
 | `documentation` | Documentation update |
 | `devex` | Developer experience improvement |
-| `question` | Usage question (closed after answering) |
+| `security` | Security fix or hardening (vulnerabilities are reported privately, not as issues) |
+| `dependencies` | Dependency update (applied by Dependabot) |
+| `question` | Usage question (closed after answering; ask on Discord first) |
 | `good first issue` | Good for newcomers |
 | `help wanted` | Extra attention is needed |
+| `duplicate` | Already reported elsewhere |
+| `invalid` | Not actionable as filed |
 | `wontfix` | This will not be worked on |
 
 ---

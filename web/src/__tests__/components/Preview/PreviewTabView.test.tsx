@@ -52,6 +52,19 @@ afterEach(() => {
 
 async function renderView(target: PreviewTarget = { kind: 'url', url: 'http://localhost:5173/pricing' }, onSendComments = mock((_text: unknown) => {})) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  // happy-dom loads the iframe's page itself (answered by the interceptor
+  // above) and fires a real `load` some time after mount, which runs
+  // `onFrameLoad`. Wait for it here: on a busy CPU it otherwise lands in the
+  // middle of a test's own scripted loads. Capture on the document so a load
+  // during mount is not missed.
+  const pageLoaded = new Promise<void>((resolve) => {
+    const onLoad = (event: Event) => {
+      if (!(event.target instanceof HTMLIFrameElement)) return
+      document.removeEventListener('load', onLoad, true)
+      resolve()
+    }
+    document.addEventListener('load', onLoad, true)
+  })
   await act(async () => {
     render(
       <QueryClientProvider client={queryClient}>
@@ -64,6 +77,7 @@ async function renderView(target: PreviewTarget = { kind: 'url', url: 'http://lo
     if (!el) throw new Error('no iframe yet')
     return el as HTMLIFrameElement
   })
+  await act(() => pageLoaded)
   const frameWindow = iframe.contentWindow as Window
   const commands: Record<string, unknown>[] = []
   frameWindow.postMessage = ((data: Record<string, unknown>) => commands.push(data)) as typeof frameWindow.postMessage

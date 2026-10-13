@@ -15,6 +15,7 @@
 Run an agent on your machine, see every tool call and diff, and keep your models, coding sessions, workspaces, and telemetry under your control.</p>
 
 <p align="center">
+  <a href="https://openagentd.dev">Website</a> ·
   <a href="#get-started">Get started</a> ·
   <a href="documents/docs/features.md">Features</a> ·
   <a href="https://discord.gg/cz6GQHQUMg">Discord</a> ·
@@ -45,15 +46,21 @@ Install the current desktop release:
 
 ```bash
 # macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/lthoangg/openagentd/main/install.sh | sh
+curl -fsSL https://openagentd.dev/install.sh | sh
 ```
 
 ```powershell
 # Windows PowerShell
-irm https://raw.githubusercontent.com/lthoangg/openagentd/main/install.ps1 | iex
+irm https://openagentd.dev/install.ps1 | iex
 ```
 
-Open **OpenAgentd** from your applications folder or Start menu. The desktop app runs its bundled backend automatically, and new installations can start a conversation immediately with the keyless OpenCode Zen default. Add another provider in Settings whenever you want to switch models.
+On macOS you can also install it with Homebrew:
+
+```bash
+brew install --cask lthoangg/tap/openagentd
+```
+
+Open **OpenAgentd** from your applications folder or Start menu. The desktop app runs its bundled backend automatically. Add a provider key in Settings, or run local models with Ollama, to start your first conversation.
 
 Release artifacts are available for macOS, Windows, and Linux on the [latest release page](https://github.com/lthoangg/openagentd/releases/latest). Unsigned desktop builds may require an explicit operating-system confirmation before first launch.
 
@@ -78,13 +85,13 @@ Install the backend when you want to run it from a terminal, use a browser clien
 
 ```bash
 # macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/lthoangg/openagentd/main/install.sh | sh -s -- --cli
+curl -fsSL https://openagentd.dev/install.sh | sh -s -- --cli
 openagentd server start
 ```
 
 ```powershell
 # Windows PowerShell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/lthoangg/openagentd/main/install.ps1))) -Cli
+& ([scriptblock]::Create((irm https://openagentd.dev/install.ps1))) -Cli
 ```
 
 The server creates its default agents and configuration on first start. It
@@ -147,7 +154,7 @@ make dev       # backend on :8000 + web UI on http://localhost:5173
 
 | Provider and security settings | MCP settings |
 | --- | --- |
-| ![Providers settings](documents/assets/readme/settings-providers-light.png) ![Sandbox settings](documents/assets/readme/settings-sandbox-light.png) | ![MCP settings](documents/assets/readme/settings-mcp-light.png) |
+| ![Providers settings](documents/assets/readme/settings-providers-light.png) ![Denied paths settings](documents/assets/readme/settings-sandbox-light.png) | ![MCP settings](documents/assets/readme/settings-mcp-light.png) |
 
 ### Built for the whole loop
 

@@ -264,6 +264,18 @@ impl AgentSession {
         }
     }
 
+    /// A stop was requested and the stopped turn is still winding down (a
+    /// cancelled tool can take seconds to drain and reap). `cancel` stays set
+    /// after the turn ends, so the active turn is what marks the stop pending.
+    pub fn is_stopping(&self) -> bool {
+        self.cancel.is_set() && self.has_active_turn.load(Ordering::SeqCst)
+    }
+
+    /// Wait up to `limit` for the current turn to end; `true` when none is active.
+    pub async fn wait_for_stop(&self, limit: std::time::Duration) -> bool {
+        tokio::time::timeout(limit, self.wait_turn_finished()).await.is_ok()
+    }
+
     fn arc(&self) -> Arc<AgentSession> {
         self.me.upgrade().expect("session alive")
     }

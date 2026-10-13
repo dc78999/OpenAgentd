@@ -4,6 +4,8 @@ import './index.css'
 import App from './App.tsx'
 import { AppErrorBoundary } from './components/AppErrorBoundary'
 import { installDesktopAuth } from './api/auth'
+import { enableSharedStreams } from './api/stream-hub'
+import { backgroundSuspendsSockets } from './hooks/use-platform'
 import { initBackgroundThrottle } from './lib/background-throttle'
 import { installDesktopShell } from './lib/desktop-shell'
 import { initTheme } from './lib/theme'
@@ -14,6 +16,7 @@ installDesktopAuth()
 initBackgroundThrottle()
 initTheme()
 installDesktopShell()
+if (!backgroundSuspendsSockets()) enableSharedStreams()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
