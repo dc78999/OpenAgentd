@@ -2,7 +2,7 @@
 title: Features
 description: Canonical, version-cited catalogue of shipped user-visible OpenAgentd features.
 status: stable
-updated: 2026-10-08
+updated: 2026-10-12
 ---
 
 # Features
@@ -14,7 +14,7 @@ release that introduced it (where known). When you ship something new, **add it 
 > double-clickable app that runs an agent on your machine, with a
 > real UI to watch every step. Open source (Apache 2.0). 16 providers. Your keys.
 
-**Latest release:** v3.9.0 · October 8, 2026 · [release notes](https://github.com/lthoangg/openagentd/releases/tag/v3.9.0)
+**Latest release:** v3.10.0 · October 12, 2026 · [release notes](https://github.com/lthoangg/openagentd/releases/tag/v3.10.0)
 
 ---
 
@@ -432,7 +432,10 @@ run from the terminal (the native Rust binary since v3.0.0).
   desktop window instead of globally across all open windows `[v1.66.1]`. On
   macOS, each desktop window now updates its native title to the active coding
   workspace name or session title so the Dock window list distinguishes
-  open windows `[v1.66.1]`. Fixed a bug where switching one window's CLI server
+  open windows `[v1.66.1]`. Window titles read `workspace - session title`
+  (just the workspace until the session is named, long session titles
+  shortened), so the Window menu, Mission Control, and the Windows/Linux
+  taskbar tell windows apart `[v3.10.0]`. Fixed a bug where switching one window's CLI server
   could still redirect other open windows onto the same server: the backend
   now targets its "backend ready" notification at the switching window only,
   and the frontend listens for it on a per-window channel instead of the
@@ -818,7 +821,7 @@ executes tools, manages its task list, and inspects workspace repositories.
   reloaded history `[v2.13.0]`.
 - **`provider_status` SSE events in stream** `[v1.17.0]` — retry, exhaustion,
   and fallback transitions surface live in single-agent and split-pane views.
-- **Automatic provider quota-exhaustion wait and resume** `[v2.20.0, updated v2.22.0]` — when an
+- **Automatic provider quota-exhaustion wait and resume** `[v2.20.0, updated v2.22.0, v2.23.0]` — when an
   OAuth provider (such as Codex, GitHub Copilot, or Grok) or any configured
   model hits rate-limiting or quota exhaustion with a known reset window
   (detected via headers, JSON metadata, body text phrasing, or live usage API
@@ -826,7 +829,10 @@ executes tools, manages its task list, and inspects workspace repositories.
   interruptible quota-wait state, emits live `waiting_quota` status events,
   displays a minute-updating countdown in the transcript, restores an active
   countdown after a browser page reload, and automatically resumes work once
-  the window resets. The user can manually stop or interrupt at any time.
+  the window resets. Stale quota-wait banners are cleared when turns resume,
+  when later transcript activity supersedes the wait state, or when a reopened
+  session is no longer actively waiting. The user can manually stop or
+  interrupt at any time.
 - **Actionable provider HTTP errors** `[v1.56.0]` — non-retryable provider
   responses (400/401/403/404/422) are classified into typed errors that carry
   the provider's own explanation instead of a bare status code. 401/403 render
@@ -1047,7 +1053,7 @@ agent against it.
   answered, and a click opens the session. The same count badges the app icon
   in the dock (macOS and Linux) and on iOS once notifications are allowed,
   and prefixes the browser tab title, e.g.
-  `(2) Fix updater restart`.
+  `(2) app - Fix updater restart`.
 - **Scheduled in the sidebar** `[v3.0.0]` — the bottom of the coding sidebar
   lists the next five enabled scheduled tasks, soonest first, each with its next
   run time (`18:05`, `Wed 09:00`, or `20/03`). Clicking a task opens the
@@ -1206,6 +1212,10 @@ OpenAgentd carries context across sessions via rolling-window summarization.
   preferences, corrections, and durable facts about the user (to `preferences.md`,
   `user.md`, or topic pages) in the same turn without asking, and says what it saved.
   Delegated agents read memory but do not write it.
+- **Frozen per-session memory** `[v3.10.0]` — the memory rules are always added for the
+  lead agent, and the `<openagentd_memory>` block is read once on a session's first turn
+  and reused unchanged, so the system prompt stays byte-identical and prefix caching holds.
+  Pages saved mid-session appear from the next session.
 - **Runtime protocol for every agent** `[v3.3.0]` — rules for instruction sources,
   secrets, workspace and git safety, and memory are added by the runtime, so agents
   with a custom prompt in their agent file get them too.
@@ -1449,6 +1459,10 @@ MCP.
   anti-bot protection (Cloudflare, DataDome, PerimeterX, Reddit, Vercel, AWS
   WAF), `web_fetch` returns a clear "Browser verification required" error
   that names the vendor, instead of the interstitial's text.
+- **Structured Markdown for landing pages** `[v3.10.0]` — `web_fetch` keeps
+  headings, lists and links on landing and app-shell pages, where article
+  extraction used to return bare paragraphs or one flat line of text. Navigation,
+  footers and inline data-URI images are left out. Articles convert as before.
 - **50k character read limit** `[v2.0.0]` — expanded `read` tool context limit to
   50,000 characters for reviewing larger source files in a single pass.
 - **Symbol outline mode for `read` tool** `[v2.4.0]` — `read` supports `outline=True`

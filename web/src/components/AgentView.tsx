@@ -185,10 +185,17 @@ function quotaWaitFromBlock(block: ContentBlock): QuotaWait | null {
   }
 }
 
-function latestQuotaWait(blocks: ContentBlock[]): QuotaWait | null {
-  for (let index = blocks.length - 1; index >= 0; index -= 1) {
-    const wait = quotaWaitFromBlock(blocks[index])
-    if (wait) return wait
+function latestActiveQuotaWait(
+  finalizedBlocks: ContentBlock[],
+  liveBlocks: ContentBlock[],
+): { blockId: string; wait: QuotaWait } | null {
+  for (const part of [liveBlocks, finalizedBlocks]) {
+    for (let index = part.length - 1; index >= 0; index -= 1) {
+      const block = part[index]
+      if (isBlankContentBlock(block)) continue
+      const wait = quotaWaitFromBlock(block)
+      return wait ? { blockId: block.id, wait } : null
+    }
   }
   return null
 }
@@ -305,7 +312,7 @@ interface AgentViewProps {
   jumpToLatestInComposer?: boolean
 }
 
-const BlockRenderer = memo(function BlockRenderer({ block, isStreaming, sessionId, onEdit, promptModel, promptThinkingLevel, onRetry, onSwitchModel, latestMCPAppBlockIds, onMentionFileOpen, onOpenSession }: {
+const BlockRenderer = memo(function BlockRenderer({ block, isStreaming, sessionId, onEdit, promptModel, promptThinkingLevel, onRetry, onSwitchModel, latestMCPAppBlockIds, onMentionFileOpen, onOpenSession, activeQuotaWaitBlockId }: {
   block: ContentBlock
   isStreaming: boolean
   sessionId?: string
@@ -320,6 +327,7 @@ const BlockRenderer = memo(function BlockRenderer({ block, isStreaming, sessionI
   latestMCPAppBlockIds?: Set<string>
   onMentionFileOpen?: (path: string) => void
   onOpenSession?: OpenSessionHandler
+  activeQuotaWaitBlockId?: string
 }) {
   switch (block.type) {
     case 'user': {
@@ -357,6 +365,7 @@ const BlockRenderer = memo(function BlockRenderer({ block, isStreaming, sessionI
       }
 
       if (status === 'waiting_quota') {
+        if (block.id !== activeQuotaWaitBlockId) return null
         const wait = quotaWaitFromBlock(block)
         return wait ? <QuotaWaitNotice wait={wait} sessionId={sessionId} persist /> : null
       }
@@ -557,6 +566,23 @@ export function AgentView({
     () => new Set(latestMCPAppKey ? latestMCPAppKey.split('\n') : []),
     [latestMCPAppKey],
   )
+  const activeQuotaWait = useMemo(
+    () => latestActiveQuotaWait(blocks, liveTail),
+    [blocks, liveTail],
+  )
+  const activeQuotaWaitBlockId = isTurnOpen ? activeQuotaWait?.blockId : undefined
+  const liveQuotaWait = isTurnOpen ? activeQuotaWait?.wait ?? null : null
+  const storedQuotaWait = useMemo(() => readStoredQuotaWait(sessionId), [sessionId])
+  const canRestoreStoredQuotaWait = isTurnOpen && !liveQuotaWait && totalLen === 0
+
+  const restoredQuotaWait = canRestoreStoredQuotaWait ? storedQuotaWait : null
+  const visibleQuotaWait = liveQuotaWait ?? restoredQuotaWait
+
+  useEffect(() => {
+    if (!sessionId) return
+    if (!visibleQuotaWait) removeStoredQuotaWait(sessionId)
+  }, [sessionId, visibleQuotaWait])
+
   // One renderer for every turn, so a finished turn's memo holds while the
   // live one streams. Inline in the turns' ``.map`` it was a new closure per
   // turn per render, which the React Compiler cannot cache either.
@@ -574,20 +600,10 @@ export function AgentView({
         latestMCPAppBlockIds={mcpAppResourceUri(block) ? latestMCPAppBlockIds : undefined}
         onMentionFileOpen={onMentionFileOpen}
         onOpenSession={onOpenSession}
+        activeQuotaWaitBlockId={activeQuotaWaitBlockId}
       />
     </div>
-  ), [endingErrorId, errorRetry, errorSwitchModel, latestMCPAppBlockIds, onMentionFileOpen, onOpenSession, sessionId])
-  // The live tail follows the finalized blocks, so its newest wait wins; only
-  // the (small) tail is rescanned per token.
-  const finalizedQuotaWait = useMemo(() => latestQuotaWait(blocks), [blocks])
-  const liveQuotaWait = useMemo(
-    () => latestQuotaWait(liveTail) ?? finalizedQuotaWait,
-    [finalizedQuotaWait, liveTail],
-  )
-  const storedQuotaWait = useMemo(() => readStoredQuotaWait(sessionId), [sessionId])
-
-  const restoredQuotaWait = liveQuotaWait ? null : storedQuotaWait
-  const visibleQuotaWait = liveQuotaWait ?? restoredQuotaWait
+  ), [activeQuotaWaitBlockId, endingErrorId, errorRetry, errorSwitchModel, latestMCPAppBlockIds, onMentionFileOpen, onOpenSession, sessionId])
 
   const lastBlock = liveTail.length > 0 ? liveTail[liveTail.length - 1] : blocks[blocks.length - 1]
   // A change key for auto-follow, not the content itself: the streamed fields

@@ -174,8 +174,10 @@ pub struct MemoryContextHook {
 #[async_trait]
 impl Hook for MemoryContextHook {
     async fn before_agent(&self, _ctx: &RunContext, state: &mut AgentState) {
+        // The rules are unconditional: with no pages yet the lead still has
+        // to learn it may create the first one.
+        append_block(&mut state.system_prompt, prompts::memory_protocol(self.lead));
         if !self.content.is_empty() {
-            append_block(&mut state.system_prompt, prompts::memory_protocol(self.lead));
             append_block(&mut state.system_prompt, &self.content);
         }
     }

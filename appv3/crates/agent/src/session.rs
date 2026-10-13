@@ -156,6 +156,10 @@ pub struct AgentSession {
     last_error: Mutex<Option<String>>,
     pending_interaction_mode: Mutex<Option<String>>,
     is_scheduler_session: AtomicBool,
+    /// `<openagentd_memory>` as of this session's first turn. Frozen so the
+    /// system prompt stays byte-identical across turns (prefix caching);
+    /// pages saved mid-session show up in the next session.
+    memory_snapshot: Mutex<Option<String>>,
     me: Weak<AgentSession>,
 }
 
@@ -189,6 +193,7 @@ impl AgentSession {
             last_error: Mutex::new(None),
             pending_interaction_mode: Mutex::new(None),
             is_scheduler_session: AtomicBool::new(false),
+            memory_snapshot: Mutex::new(None),
             me: me.clone(),
         })
     }
@@ -414,8 +419,17 @@ impl AgentSession {
         }
         match db::get_pending_question(&self.pool, &sid).await {
             Ok(Some(q)) => {
-                if let Err(e) = db::resolve_pending_question(&self.pool, &q.id, normalize_question_status(reason), None).await {
-                    tracing::warn!("dismiss_pending_question_failed error={}", e);
+                let status = normalize_question_status(reason);
+                match db::resolve_pending_question(&self.pool, &q.id, status, None).await {
+                    Ok(Some(_)) => {
+                        // Tell every connected client, or the card stays open
+                        // and answerable (the answer would 409).
+                        let api_sid = db::codec::api_uuid(&db::codec::db_id(&sid));
+                        let qid = db::codec::api_uuid(&q.id);
+                        store().push_event(&api_sid, &events::question_dismissed(&qid, &api_sid, status), true);
+                    }
+                    Ok(None) => {}
+                    Err(e) => tracing::warn!("dismiss_pending_question_failed error={}", e),
                 }
             }
             Ok(None) => {}
@@ -914,8 +928,16 @@ impl AgentSession {
 
         let ws_path = session_workspace_dir(&sid, Some(&workspace));
         let denied = Arc::new(DeniedPaths::new(&ws_path, Some(sid.clone())));
-        // Reads every memory page; keep that disk walk off the async worker.
-        let memory = tokio::task::spawn_blocking(appv3_memory::memory_context).await.unwrap_or_default();
+        let frozen = self.memory_snapshot.lock().unwrap().clone();
+        let memory = match frozen {
+            Some(m) => m,
+            None => {
+                // Reads every memory page; keep that disk walk off the async worker.
+                let m = tokio::task::spawn_blocking(appv3_memory::memory_context).await.unwrap_or_default();
+                *self.memory_snapshot.lock().unwrap() = Some(m.clone());
+                m
+            }
+        };
         let mut hooks: Vec<HookRef> = vec![
             Arc::new(CurrentDateHook),
             Arc::new(StreamPublisherHook::new(&sid, &name, true)),

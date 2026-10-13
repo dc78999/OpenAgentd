@@ -2,19 +2,21 @@ import { beforeEach, describe, expect, it, mock } from 'bun:test'
 
 let isTauri = true
 const setBadgeCount = mock(async (..._args: unknown[]) => {})
+const setTitle = mock(async (..._args: unknown[]) => {})
 mock.module('@/hooks/use-platform', () => ({ getPlatform: () => ({ isTauri, os: 'macos' }) }))
-mock.module('@tauri-apps/api/window', () => ({ getCurrentWindow: () => ({ setBadgeCount }) }))
+mock.module('@tauri-apps/api/window', () => ({ getCurrentWindow: () => ({ setBadgeCount, setTitle }) }))
 
-const { buildDesktopWindowTitle, syncDesktopBadgeCount } = await import('@/lib/window-title')
+const { buildDesktopWindowTitle, syncDesktopBadgeCount, syncDesktopWindowTitle } = await import('@/lib/window-title')
 
 beforeEach(() => {
   isTauri = true
   setBadgeCount.mockClear()
+  setTitle.mockClear()
 })
 
 describe('buildDesktopWindowTitle', () => {
-  it('uses the session title for coding windows when available', () => {
-    expect(buildDesktopWindowTitle({ workspace: '/Users/name/Workspace A', sessionTitle: 'Fix updater restart' })).toBe('Fix updater restart')
+  it('joins the workspace and session title', () => {
+    expect(buildDesktopWindowTitle({ workspace: '/Users/name/Workspace A', sessionTitle: 'Fix updater restart' })).toBe('Workspace A - Fix updater restart')
   })
 
   it('falls back to the workspace basename for coding windows without a session title', () => {
@@ -42,12 +44,46 @@ describe('buildDesktopWindowTitle', () => {
         workspaceName: 'Chat',
         sessionTitle: 'Trip planning',
       }),
-    ).toBe('Trip planning')
+    ).toBe('Chat - Trip planning')
+  })
+
+  it('does not repeat the workspace when the session title is the same', () => {
+    expect(buildDesktopWindowTitle({ workspaceName: 'Chat', sessionTitle: 'Chat' })).toBe('Chat')
+  })
+
+  it('truncates a long session title but keeps the workspace', () => {
+    const title = buildDesktopWindowTitle({ workspaceName: 'app', sessionTitle: 'x'.repeat(200) })
+    expect(title.startsWith('app - xxx')).toBe(true)
+    expect(title.endsWith('…')).toBe(true)
+    expect(title.length).toBe('app - '.length + 60)
   })
 
   it('counts sessions that need you in front of the title', () => {
-    expect(buildDesktopWindowTitle({ sessionTitle: 'Fix updater restart', needsYou: 2 })).toBe('(2) Fix updater restart')
+    expect(buildDesktopWindowTitle({ workspaceName: 'app', sessionTitle: 'Fix updater restart', needsYou: 2 })).toBe('(2) app - Fix updater restart')
     expect(buildDesktopWindowTitle({ sessionTitle: 'Fix updater restart', needsYou: 0 })).toBe('Fix updater restart')
+  })
+})
+
+describe('syncDesktopWindowTitle', () => {
+  it('sets document.title and the native window title, skipping repeats', async () => {
+    syncDesktopWindowTitle({ workspaceName: 'app', sessionTitle: 'First' })
+    syncDesktopWindowTitle({ workspaceName: 'app', sessionTitle: 'First' })
+    syncDesktopWindowTitle({ workspaceName: 'app', sessionTitle: 'Second' })
+    await Promise.resolve()
+    await new Promise((r) => setTimeout(r, 0))
+
+    expect(document.title).toBe('app - Second')
+    expect(setTitle.mock.calls).toEqual([['app - First'], ['app - Second']])
+  })
+
+  it('leaves the native title alone outside the desktop app', async () => {
+    isTauri = false
+
+    syncDesktopWindowTitle({ workspaceName: 'app', sessionTitle: 'Web only' })
+    await new Promise((r) => setTimeout(r, 0))
+
+    expect(document.title).toBe('app - Web only')
+    expect(setTitle).not.toHaveBeenCalled()
   })
 })
 

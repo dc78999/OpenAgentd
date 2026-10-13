@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand'
 import { cancelQueuedMessage, postAgentChat } from '@/api/client'
-import { revokeBlobUrlsFromBlocks } from './helpers'
+import { applyQuestionResolution, revokeBlobUrlsFromBlocks } from './helpers'
 import { createDefaultAgentStream } from './defaults'
 import { clearReconnectTimer } from './stream-slice'
 import type { PendingMessage, AgentStore } from './types'
@@ -159,6 +159,7 @@ export const createPendingSlice: StateCreator<
           const submittedAt = Date.now()
           set((draft) => {
             draft.sessionId = result.session_id
+            applyQuestionResolution(draft, null, null, 'superseded')
             draft.sessionModel = options?.model ?? get().sessionModel
             draft.sessionThinkingLevel = options?.thinkingLevel ?? get().sessionThinkingLevel
             draft._sessionSettingsDirty = false
@@ -186,6 +187,7 @@ export const createPendingSlice: StateCreator<
           draft.sessionThinkingLevel = options?.thinkingLevel ?? get().sessionThinkingLevel
           draft._sessionSettingsDirty = false
           draft._sessionSettingsVersion += 1
+          applyQuestionResolution(draft, null, null, 'superseded')
           const msgId = result.message_id ?? ''
           const alreadySpliced = isSpliced(draft, msgId)
           if (!alreadySpliced) {
@@ -253,6 +255,7 @@ export const createPendingSlice: StateCreator<
       )
       set((draft) => {
         draft.sessionId = result.session_id
+        applyQuestionResolution(draft, null, null, 'superseded')
         draft.sessionModel = options?.model ?? get().sessionModel
         draft.sessionThinkingLevel = options?.thinkingLevel ?? get().sessionThinkingLevel
         draft._sessionSettingsDirty = false

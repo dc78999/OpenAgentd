@@ -65,8 +65,28 @@ export function applyCacheInvalidations(
   for (const queryKey of keys.values()) queryClient.invalidateQueries({ queryKey })
   for (const [workspace, paths] of scopedPaths) {
     // A whole-workspace refresh in the same batch already refetches the diff.
-    if (!wholeWorkspace.has(workspace)) void patchDiffForPaths(queryClient, workspace, paths)
+    if (!wholeWorkspace.has(workspace)) queuePatchDiffForPaths(queryClient, workspace, paths)
   }
+}
+
+// Scoped patches for one workspace run one at a time. Each patch reads the
+// cached diff, awaits a scoped fetch, then writes a merge; two overlapping
+// patches from separate drains (two agents ending tools back to back) both
+// merged into the cache as it was before either wrote, and the later write
+// dropped the earlier one's file.
+const patchChains = new Map<string, Promise<void>>()
+
+function queuePatchDiffForPaths(
+  queryClient: BridgeQueryClient,
+  workspace: string,
+  paths: string[],
+): void {
+  const previous = patchChains.get(workspace) ?? Promise.resolve()
+  const next = previous.then(() => patchDiffForPaths(queryClient, workspace, paths))
+  patchChains.set(workspace, next)
+  void next.finally(() => {
+    if (patchChains.get(workspace) === next) patchChains.delete(workspace)
+  })
 }
 
 async function patchDiffForPaths(
@@ -76,9 +96,9 @@ async function patchDiffForPaths(
 ): Promise<void> {
   if (paths.length === 0) return
   const key = queryKeys.coding.diff(workspace)
-  const cached = queryClient.getQueryData<WorkspaceGitDiffResponse>(key)
+  const before = queryClient.getQueryData<WorkspaceGitDiffResponse>(key)
 
-  if (!cached || !cached.is_git_repo) return
+  if (!before || !before.is_git_repo) return
 
   let scoped: WorkspaceGitDiffResponse
   try {
@@ -88,12 +108,16 @@ async function patchDiffForPaths(
     return
   }
 
-  const merged = mergeScopedDiff(cached.diff, scoped.diff, paths)
-  queryClient.setQueryData<WorkspaceGitDiffResponse>(key, {
-    ...cached,
-    diff: merged,
-    truncated: cached.truncated || scoped.truncated,
-    untracked: nextUntracked(cached.untracked, scoped.untracked, paths),
+  // Merge into the cache as it is now, not as it was before the fetch: a
+  // whole-diff refetch may have landed while the scoped request was out.
+  queryClient.setQueryData<WorkspaceGitDiffResponse>(key, (current) => {
+    if (!current || !current.is_git_repo) return current
+    return {
+      ...current,
+      diff: mergeScopedDiff(current.diff, scoped.diff, paths),
+      truncated: current.truncated || scoped.truncated,
+      untracked: nextUntracked(current.untracked, scoped.untracked, paths),
+    }
   })
 }
 

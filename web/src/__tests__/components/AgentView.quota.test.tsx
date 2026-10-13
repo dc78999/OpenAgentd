@@ -43,6 +43,14 @@ function makeQuotaBlock(
   }
 }
 
+function makeUserBlock(id: string, content = "continue"): ContentBlock {
+  return {
+    id,
+    type: "user",
+    content,
+  }
+}
+
 describe("AgentView — waiting_quota status rendering", () => {
   it("renders quota wait block with custom message", () => {
     const customMsg =
@@ -134,5 +142,48 @@ describe("AgentView — waiting_quota status rendering", () => {
 
     expect(screen.getByText("Quota Limit Reached · Waiting for Reset")).toBeTruthy()
     expect(screen.getByText("Resets in 2h 00m")).toBeTruthy()
+  })
+
+  it("does not render historical quota wait when the turn is no longer active", () => {
+    render(
+      <AgentView
+        blocks={[makeQuotaBlock("q-ended")]}
+        currentBlocks={[]}
+        isWorking={false}
+      />,
+    )
+
+    expect(screen.queryByText("Quota Limit Reached · Waiting for Reset")).toBeNull()
+  })
+
+  it("does not keep the quota wait notice after chat activity resumes", () => {
+    render(
+      <AgentView
+        blocks={[makeQuotaBlock("q-old"), makeUserBlock("u-next")]}
+        currentBlocks={[]}
+        isWorking={true}
+      />,
+    )
+
+    expect(screen.queryByText("Quota Limit Reached · Waiting for Reset")).toBeNull()
+  })
+
+  it("clears stored quota wait when no active wait is present", () => {
+    const resetAt = Math.floor(Date.now() / 1000) + 7200
+    localStorage.setItem(
+      "openagentd:quota-wait:quota-session",
+      JSON.stringify({ model: "codex:gpt-5.4", resetsAt: resetAt }),
+    )
+
+    render(
+      <AgentView
+        blocks={[]}
+        currentBlocks={[]}
+        isWorking={false}
+      />,
+    )
+
+    expect(screen.queryByText("Quota Limit Reached · Waiting for Reset")).toBeNull()
+    expect(localStorage.getItem("openagentd:quota-wait:quota-session")).toBeNull()
   })
 })

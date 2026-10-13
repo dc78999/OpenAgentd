@@ -290,4 +290,50 @@ describe('applyCacheInvalidations — coding_workspace_paths', () => {
     expect(mockGetDiff).not.toHaveBeenCalled()
     expect(calls.map((c) => c.queryKey)).toContainEqual(queryKeys.coding.diff(WS))
   })
+
+  it('keeps both updates when patches from separate batches overlap in flight', async () => {
+    // Two tool ends in quick succession (e.g. two agents) land as two
+    // drains. The second patch used to merge into the cache snapshot taken
+    // before the first one wrote, dropping the first file's update.
+    const client = new QueryClient()
+    client.setQueryData(queryKeys.coding.diff(WS), {
+      workspace: WS,
+      is_git_repo: true,
+      diff: 'diff --git a/foo b/foo\n+old-foo\n\ndiff --git a/bar b/bar\n+old-bar',
+      untracked: [],
+      truncated: false,
+    } satisfies WorkspaceGitDiffResponse)
+    const pending: { paths: string[]; resolve: () => void }[] = []
+    mockGetDiff.mockImplementation((_ws: string, paths: string[]) =>
+      new Promise((resolve) => {
+        pending.push({
+          paths,
+          resolve: () =>
+            resolve({
+              workspace: WS,
+              is_git_repo: true,
+              diff: paths.map((p) => `diff --git a/${p} b/${p}\n+new-${p}`).join('\n'),
+              untracked: [],
+              truncated: false,
+            }),
+        })
+      }),
+    )
+
+    applyCacheInvalidations(client, [{ kind: 'coding_workspace_paths', workspace: WS, paths: ['foo'] }])
+    applyCacheInvalidations(client, [{ kind: 'coding_workspace_paths', workspace: WS, paths: ['bar'] }])
+    // Resolve whatever is in flight, oldest first, until everything settles.
+    for (let i = 0; i < 10; i++) {
+      await flushMicrotasks()
+      const next = pending.shift()
+      if (!next) break
+      next.resolve()
+    }
+    await flushMicrotasks()
+
+    const after = client.getQueryData<WorkspaceGitDiffResponse>(queryKeys.coding.diff(WS))!
+    expect(after.diff).toContain('+new-foo')
+    expect(after.diff).toContain('+new-bar')
+    expect(after.diff).not.toContain('+old-')
+  })
 })

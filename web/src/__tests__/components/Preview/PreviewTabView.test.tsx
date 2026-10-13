@@ -272,6 +272,31 @@ describe('PreviewTabView', () => {
     expect(screen.getByText('2 entries')).toBeTruthy()
   })
 
+  it('keeps the tools when the page reloads again before the first load is judged', async () => {
+    const { iframe, frameWindow, commands } = await renderView({ kind: 'url', url: 'http://localhost:5173/#features' })
+    // Page 1: ready on DOMContentLoaded, then load, answered hello.
+    fromPage(frameWindow, { type: 'ready', path: '/', title: 'A', status: 'ok' })
+    fireEvent.load(iframe)
+    fromPage(frameWindow, { type: 'ready', path: '/', title: 'A', status: 'ok' })
+    // Page 2 (a dev-server full reload) lands inside the grace window.
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    fromPage(frameWindow, { type: 'ready', path: '/#features', title: 'A', status: 'ok' })
+    fireEvent.load(iframe)
+    fromPage(frameWindow, { type: 'ready', path: '/#features', title: 'A', status: 'ok' })
+    expect(commands.filter((c) => c.type === 'hello')).toHaveLength(2)
+    // Past the first load's grace period and the second's.
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    expect(screen.queryByText(/did not load the preview script/)).toBeNull()
+    expect((screen.getByRole('button', { name: /Design/ }) as HTMLButtonElement).disabled).toBe(false)
+  })
+
+  it('says so when a loaded page never answers the inspector', async () => {
+    const { iframe } = await renderView()
+    fireEvent.load(iframe)
+    expect(await screen.findByText(/did not load the preview script/, undefined, { timeout: 2000 })).toBeTruthy()
+    expect((screen.getByRole('button', { name: /Design/ }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
   it('shows when the agent is using the page', async () => {
     const { frameWindow } = await renderView()
     expect(screen.queryByRole('status', { name: /agent/i })).toBeNull()
