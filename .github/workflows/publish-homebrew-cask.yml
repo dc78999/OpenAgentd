@@ -136,8 +136,8 @@ jobs:
 
             url "${DOWNLOAD_URL}"
             name "OpenAgentd"
-            desc "On-machine AI assistant with a web cockpit"
-            homepage "https://github.com/lthoangg/openagentd"
+            desc "Desktop app for a local coding agent you can watch work"
+            homepage "https://openagentd.dev"
 
             # Apple Silicon only. ``release-desktop.yml`` does not build an
             # Intel ``.dmg`` today; Intel Mac users should install the CLI
