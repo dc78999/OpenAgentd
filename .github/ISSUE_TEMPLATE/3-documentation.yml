@@ -1,0 +1,26 @@
+name: Documentation
+description: Something in the README, docs, or in-app help is wrong, missing, or unclear
+labels: ["documentation"]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Where is it?
+      description: A link, a file path, or the screen in the app.
+      placeholder: https://github.com/lthoangg/OpenAgentd/blob/main/README.md#cli-server
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's wrong or missing?
+      description: Quote the text if it's wrong. If something is missing, say what you were trying to find out.
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested fix
+      description: The wording or content you'd expect, if you have it.

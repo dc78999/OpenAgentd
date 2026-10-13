@@ -1,0 +1,134 @@
+name: Bug report
+description: Something is broken or behaving unexpectedly
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. The fields below ask for what maintainers need to reproduce it, so we can start on a fix without a round of follow-up questions.
+
+        - **Security vulnerability?** Don't open a public issue. Report it privately through [GitHub Security Advisories](https://github.com/lthoangg/OpenAgentd/security/advisories/new).
+        - **Question or setup help?** Ask on [Discord](https://discord.gg/cz6GQHQUMg).
+        - **Docs problem?** Go back and choose **Documentation**.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched [existing issues](https://github.com/lthoangg/OpenAgentd/issues?q=is%3Aissue) and this hasn't been reported.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the problem. Copy any error message exactly as shown.
+      placeholder: In a long chat, compacting the conversation shows an error and nothing is compacted.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The fewest steps that show the problem, starting from a new chat if you can.
+      placeholder: |
+        1. Start a new chat
+        2. Send about 30 messages
+        3. Compact the conversation
+        4. See the error
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often does it happen?
+      options:
+        - Every time
+        - Sometimes
+        - It happened once
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: OpenAgentd version
+      description: |
+        In the app, open **Settings**; the version is next to "About OpenAgentd". In a terminal, run `openagentd --version`. From source, run `git rev-parse --short HEAD`. If you're not on the [latest release](https://github.com/lthoangg/OpenAgentd/releases/latest), please update and check whether the bug still happens.
+      placeholder: v3.10.0
+    validations:
+      required: true
+
+  - type: input
+    id: last-working-version
+    attributes:
+      label: Last version where it worked
+      description: Leave blank if it never worked or you don't know.
+      placeholder: v3.9.0
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How do you run OpenAgentd?
+      options:
+        - Desktop app
+        - CLI server (openagentd server) with the desktop app, a browser, or another client
+        - iOS app connected to a server
+        - From source (make dev or make run)
+        - Other (describe below)
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      description: Include the version, and on macOS the chip. For the iOS app, also give the server's OS.
+      placeholder: macOS 15.5 (Apple silicon)
+    validations:
+      required: true
+
+  - type: input
+    id: model
+    attributes:
+      label: Provider and model
+      description: The model the session used, as shown in the chat's model picker. Write "N/A" if the bug doesn't involve a model.
+      placeholder: openai:gpt-5.5
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Paste the errors from around the time it failed. They usually show the cause. **Remove API keys, tokens, and anything private before posting.**
+
+        Logs are on the computer that runs the OpenAgentd server:
+        - macOS and Linux: `~/.local/state/openagentd/logs/app/`
+        - Windows: `%USERPROFILE%\.local\state\openagentd\logs\app\`
+        - From source: `.openagentd/dev/state/logs/app/` in your checkout
+        - Desktop app: **Help → View Backend Log** and **Help → View Desktop Log** open the app's own logs too.
+
+        `app-error.log` holds errors only, and `app.log` holds everything. To copy the last 50 errors:
+        - macOS and Linux: `tail -n 50 ~/.local/state/openagentd/logs/app/app-error.log`
+        - Windows PowerShell: `Get-Content "$env:USERPROFILE\.local\state\openagentd\logs\app\app-error.log" -Tail 50`
+      render: text
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Screenshots and other details
+      description: Screenshots or recordings, any workaround you found, and for install or setup problems the output of `openagentd doctor`.
