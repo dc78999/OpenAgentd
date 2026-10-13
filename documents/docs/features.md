@@ -1915,6 +1915,10 @@ The same HTTP + SSE API drives the desktop, browser, and mobile clients. Embed i
   stream, completed and stopped turns notify clients to sync and update session
   states globally, generated titles update every session surface, and native
   notifications no longer depend on the originating chat being open.
+- **Shared global stream across windows** `[v3.10.1]` — windows of one app
+  share a single global stream (one window reads it and relays it to the
+  rest), so several busy windows stay under the webview's six connections per
+  host and approve, stop and list requests are no longer queued behind them.
 - **SSE event protocol** `[since v1.0]` — typed events: `thinking`, `message`,
   `tool_call`, `tool_start`, `tool_output_delta`, `tool_end`, `usage`,
   `inbox`, `agent_status`, `queued_turn_start`, `rate_limit`,

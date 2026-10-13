@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
-import { globalEventStream } from '@/api/global-events'
+import { sharedGlobalEventStream } from '@/api/shared-global-events'
 import { onApiBaseUrlChange } from '@/api/base-url'
 import { backgroundSuspendsSockets } from '@/hooks/use-platform'
 import { sendDesktopNotification } from '@/lib/desktop-notifications'
@@ -361,7 +361,7 @@ export function useGlobalEventStream(): void {
       controller?.abort()
       controller = new AbortController()
       opened = false
-      globalEventStream({
+      sharedGlobalEventStream({
         onOpen: () => {
           if (disposed || generation !== connectionGeneration) return
           opened = true
