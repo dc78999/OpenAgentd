@@ -32,10 +32,12 @@ fancy-regex = "0.14"
 memchr = "2"
 globset = "0.4"
 os_pipe = "1"
-# HTML → Markdown for web_fetch. 0.5.3 is the last release on html5ever 0.36,
-# which `trafilatura` and `scraper` share (one HTML parser in the binary).
-htmd = "=0.5.3"
-markup5ever_rcdom = "0.36"
+# HTML → Markdown for web_fetch. htmd is on html5ever 0.38 while `trafilatura`
+# and `scraper` are still on 0.36, so the binary carries both parsers (+35 kB
+# stripped) until trafilatura moves. markup5ever_rcdom must match htmd's (its
+# `Element.node`).
+htmd = "=0.5.5"
+markup5ever_rcdom = "0.38"
 html5ever = "0.36"
 encoding_rs = "0.8"
 scraper = "0.25"
@@ -47,9 +49,10 @@ unicode-normalization = "0.1"
 # PDF/DOCX → Markdown for `read` and `web_fetch`: the same Rust crate v2's
 # `firecrawl-anydoc` wheel wraps.
 anydoc = "=0.2.4"
-# Not used directly: pins anydoc's PDF engine to the version v2's anydoc 0.2.4
-# wheel was built with, so PDF text is byte-identical to v2.
-pdf-inspector = "=1.14.2"
+# Not used directly: pins anydoc's PDF engine. Past the 1.14.2 that v2's
+# anydoc 0.2.4 wheel was built with, so PDF text no longer matches v2 byte
+# for byte (sub/superscripts, de-hyphenation, fenced code); see REPORT.md.
+pdf-inspector = "=1.25.2"
 urlencoding = "2"
 toml = "0.9"
 
