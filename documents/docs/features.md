@@ -12,7 +12,7 @@ release that introduced it (where known). When you ship something new, **add it 
 
 > **Headline.** OpenAgentd is a coding-first desktop workspace for a local coding agent — a
 > double-clickable app that runs an agent on your machine, with a
-> real UI to watch every step. Open source (Apache 2.0). 16 providers. Your keys.
+> real UI to watch every step. Open source (Apache 2.0). 18 providers. Your keys.
 
 **Latest release:** v3.10.0 · October 12, 2026 · [release notes](https://github.com/lthoangg/openagentd/releases/tag/v3.10.0)
 
