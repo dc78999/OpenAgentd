@@ -54,7 +54,10 @@ if (import.meta.main) {
   // Desktop keyboard focus (zones, row keys, dock tab keys, drag and the
   // launcher, chat menus, tooltip timing) raised it to 2.39 MB / 716 kB,
   // with a 1.75 MB index chunk.
-  const limits = { eagerBytes: 2_400_000, eagerGzipBytes: 720_000, largestChunkBytes: 1_755_000 }
+  // Later features (the shared event stream, window titles, UI primitives)
+  // and framer-motion 14 raised it to 2.39 MB / 721 kB, with a 1.75 MB
+  // index chunk.
+  const limits = { eagerBytes: 2_410_000, eagerGzipBytes: 725_000, largestChunkBytes: 1_755_000 }
   console.log('Production JavaScript budget:', sizes)
   const failures = budgetFailures(sizes, limits)
   if (failures.length) {
