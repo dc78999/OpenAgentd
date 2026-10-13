@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
-import { setupServer } from 'msw/node'
+import { setupServer } from '@/__tests__/msw'
 
 mock.module('lucide-react', () => new Proxy({}, { get: () => () => null }))
 
@@ -35,7 +35,7 @@ const AGENT = {
 }
 
 beforeEach(() => {
-  server.listen({ onUnhandledRequest: 'bypass' })
+  server.listen({ onUnhandledFrame: 'bypass' })
   server.use(
     http.get('http://localhost/api/agent/agents', () =>
       HttpResponse.json({ agents: [AGENT] }),

@@ -11,7 +11,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { delay, http, HttpResponse } from 'msw'
-import { setupServer } from 'msw/node'
+import { setupServer } from '@/__tests__/msw'
 
 mock.module('lucide-react', () => new Proxy({}, { get: () => () => null }))
 
@@ -22,7 +22,7 @@ const server = setupServer()
 let originalFetch: typeof fetch | undefined
 
 beforeEach(() => {
-  server.listen({ onUnhandledRequest: 'error' })
+  server.listen({ onUnhandledFrame: 'error' })
   originalFetch = globalThis.fetch
   globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
     if (typeof input === 'string' && input.startsWith('/')) {
