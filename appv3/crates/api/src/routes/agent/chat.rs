@@ -172,6 +172,12 @@ async fn agent_chat(State(st): State<AppState>, req: Request) -> ApiResult<Respo
     }
     let message = message.unwrap_or_default();
     let attachments = form.files;
+    // A message sent right after Stop (Stop & send, or another client) would
+    // otherwise queue behind the turn still winding down, and a stopped turn
+    // never starts its queue. Waited out before the lock, so nothing blocks on it.
+    if agent.is_stopping() {
+        agent.wait_for_stop(appv3_agent::service::STOP_SETTLE_TIMEOUT).await;
+    }
     let existing_total: usize = attachments.iter().map(|a| a.data.len()).sum();
     let blocks = {
         let (m, s, w, mm) = (message.clone(), sid.clone(), ws.clone(), mentions.clone());
@@ -202,6 +208,9 @@ async fn agent_chat(State(st): State<AppState>, req: Request) -> ApiResult<Respo
         .await?;
         if !agent.has_active_user_turn() {
             agent.activate_queued_user_messages(&sid).await;
+        } else if agent.is_stopping() {
+            // The stop outlasted the wait above: run the queue once it ends.
+            tokio::spawn(appv3_agent::service::activate_queued_after_stop(agent.clone(), sid.clone()));
         }
         return Ok(json_code(202, json!({"status": "queued", "session_id": sid, "message_id": qid})));
     }

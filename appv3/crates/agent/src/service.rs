@@ -6,12 +6,19 @@ use crate::session::{session_uploads_dir, AgentSession, SessionError, UserMessag
 use crate::stream_store::store;
 use serde_json::{json, Value};
 use std::path::Path;
+use std::sync::Arc;
+use std::time::Duration;
 
 pub const ATTACHMENT_SIZE_LIMIT: usize = 50 * 1024 * 1024;
 pub const GLOBAL_SIZE_LIMIT: usize = 50 * 1024 * 1024;
 pub const MENTION_MAX_BYTES: usize = 500 * 1024;
 pub const MAX_FILENAME_LEN: usize = 200;
 const FILENAME_STEM_MAX_LEN: usize = 160;
+
+/// How long a stop may take to wind the turn down before callers give up
+/// waiting. A cancelled shell tool alone can spend 2s draining stdout plus 5s
+/// reaping the process.
+pub const STOP_SETTLE_TIMEOUT: Duration = Duration::from_secs(10);
 
 pub const MIME_CATEGORY: &[(&str, &str)] = &[
     ("text/plain", "text"),
@@ -442,28 +449,46 @@ pub async fn dispatch_user_message(session: &AgentSession, d: Dispatch) -> Resul
 }
 
 /// `interrupt_agent` → cancelled agent names.
+///
+/// Returns once the stopped turn has ended (bounded by
+/// [`STOP_SETTLE_TIMEOUT`]), so a reload sees the final transcript and a
+/// message sent next starts its own turn instead of queueing behind the
+/// stopped one. Unread steers are promoted only then: promoted earlier, they
+/// landed before the result of the tool the stop was still cancelling.
 pub async fn interrupt_agent(session: &AgentSession, session_id: Option<&str>) -> Vec<String> {
     let effective = session_id.map(String::from).or_else(|| Some(session.session_id())).filter(|s| !s.is_empty());
-    if let Some(sid) = &effective {
-        match crate::snapshot::release_queued(&session.pool, sid).await {
-            Ok(r) if !r.is_empty() => tracing::info!("agent_interrupt_released_queued session_id={} count={}", sid, r.len()),
-            Ok(_) => {}
-            Err(e) => tracing::warn!("agent_interrupt_release_queue_failed session_id={} error={}", sid, e),
-        }
-    }
     session.dismiss_pending_question("dismissed", effective.as_deref()).await;
     let mut names = vec![];
     if session.is_busy() {
         names.push(session.name());
         session.handle_stop().await;
     }
+    if !session.wait_for_stop(STOP_SETTLE_TIMEOUT).await {
+        tracing::warn!("agent_interrupt_settle_timeout session_id={:?}", effective);
+    }
     if let Some(sid) = &effective {
+        match crate::snapshot::release_queued(&session.pool, sid).await {
+            Ok(r) if !r.is_empty() => tracing::info!("agent_interrupt_released_queued session_id={} count={}", sid, r.len()),
+            Ok(_) => {}
+            Err(e) => tracing::warn!("agent_interrupt_release_queue_failed session_id={} error={}", sid, e),
+        }
         store().push_event(sid, &Envelope::from_parts("done", json!({})), true);
         store().mark_done(sid);
         broadcaster::publish("session_turn_completed", json!({"session_id": sid, "status": "stopped"}));
     }
     tracing::info!("agent_interrupt session_id={:?} cancelled={:?}", session_id, names);
     names
+}
+
+/// Start the queue once a stopping turn has ended. A stopped turn never
+/// activates queued messages itself, so one queued while the stop was still
+/// winding down would otherwise wait for the next message.
+pub async fn activate_queued_after_stop(session: Arc<AgentSession>, session_id: String) {
+    session.wait_turn_finished().await;
+    let _guard = session.user_message_lock.lock().await;
+    if !session.has_active_user_turn() {
+        session.activate_queued_user_messages(&session_id).await;
+    }
 }
 
 #[cfg(test)]

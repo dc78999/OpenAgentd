@@ -604,6 +604,9 @@ run from the terminal (the native Rust binary since v3.0.0).
     its own once the turn ends (`⌥Enter` / `Alt+Enter`), and Stop & send
     (`⌘Enter` / `Ctrl+Enter`). In the transcript, steering messages read
     "Read before the next step" and held ones "Sends when this turn ends".
+  - Stop & send waits for the stopped turn, including a running tool, to
+    wind down, then sends; steers the agent had not read go out first, after
+    the stopped turn `[v3.12.0]`.
   - Queued messages reach the agent in the order they go out: steers first,
     then held messages, one turn each. A steer is read before the running
     turn's next step, or starts the next turn if that turn makes no further
