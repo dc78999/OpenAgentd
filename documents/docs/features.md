@@ -1707,6 +1707,12 @@ Single-user trust model. The host is trusted. The operator is the user.
   matching per tool. Auto-allow, blocking on user reply, or persistent rules.
 - **Shell command pre-scan** `[since v1.0]` — best-effort path-token scan
   inside shell commands.
+- **Secret-free shell environment** `[v3.11.1]` — the agent's shell tool and
+  the built-in terminal do not inherit secrets the server holds: its access
+  token, provider API keys, and every other value it loaded from a `.env` file
+  or saved from Settings (including MCP secrets). `printenv` cannot get around
+  the `**/.env` read denial. Variables the user exported before starting the
+  server still pass through.
 
 ---
 
