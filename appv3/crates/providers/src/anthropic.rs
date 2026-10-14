@@ -462,11 +462,12 @@ impl AnthropicProvider {
     }
 
     fn request(&self, url: &str, body: &Value) -> reqwest::RequestBuilder {
-        let mut r = self.client.post(url).json(body);
+        // Headers before `json()`, which would otherwise add a second Content-Type.
+        let mut r = self.client.post(url);
         for (k, v) in self.headers.read().unwrap().iter() {
             r = r.header(k, v);
         }
-        r
+        r.json(body)
     }
 
     pub fn parse_response(&self, data: &Value) -> AssistantMessage {
@@ -651,6 +652,13 @@ impl LlmProvider for AnthropicProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn request_sends_one_content_type() {
+        let p = AnthropicProvider::new("k", "claude-x", "http://127.0.0.1:1", Kwargs::new()).unwrap();
+        let req = p.request("http://127.0.0.1:1/v1/messages", &json!({})).build().unwrap();
+        assert_eq!(req.headers().get_all(reqwest::header::CONTENT_TYPE).iter().count(), 1);
+    }
 
     #[test]
     fn split_merges_tool_results_and_marks_cache() {

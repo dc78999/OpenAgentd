@@ -2,7 +2,7 @@
 title: Features
 description: Canonical, version-cited catalogue of shipped user-visible OpenAgentd features.
 status: stable
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Features
@@ -14,7 +14,7 @@ release that introduced it (where known). When you ship something new, **add it 
 > double-clickable app that runs an agent on your machine, with a
 > real UI to watch every step. Open source (Apache 2.0). 18 providers. Your keys.
 
-**Latest release:** v3.11.0 · October 13, 2026 · [release notes](https://github.com/lthoangg/openagentd/releases/tag/v3.11.0)
+**Latest release:** v3.11.1 · October 14, 2026 · [release notes](https://github.com/lthoangg/openagentd/releases/tag/v3.11.1)
 
 ---
 
@@ -1707,6 +1707,12 @@ Single-user trust model. The host is trusted. The operator is the user.
   matching per tool. Auto-allow, blocking on user reply, or persistent rules.
 - **Shell command pre-scan** `[since v1.0]` — best-effort path-token scan
   inside shell commands.
+- **Secret-free shell environment** `[v3.11.1]` — the agent's shell tool and
+  the built-in terminal do not inherit secrets the server holds: its access
+  token, provider API keys, and every other value it loaded from a `.env` file
+  or saved from Settings (including MCP secrets). `printenv` cannot get around
+  the `**/.env` read denial. Variables the user exported before starting the
+  server still pass through.
 
 ---
 

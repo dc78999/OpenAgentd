@@ -450,11 +450,13 @@ impl CompletionsHandler {
     }
 
     fn request(&self, client: &reqwest::Client, body: &Value) -> reqwest::RequestBuilder {
-        let mut req = client.post(format!("{}/chat/completions", self.base_url)).json(body);
+        // Headers first: `json()` adds Content-Type only when absent, while
+        // `header()` appends, so the reverse order sends it twice.
+        let mut req = client.post(format!("{}/chat/completions", self.base_url));
         for (k, v) in self.request_headers(body) {
             req = req.header(k, v);
         }
-        req
+        req.json(body)
     }
 
     pub fn parse_response(&self, data: &Value, cost_model: Option<&str>) -> AssistantMessage {
@@ -839,11 +841,13 @@ impl ResponsesHandler {
     }
 
     fn request(&self, client: &reqwest::Client, body: &Value, merged: &Kwargs) -> reqwest::RequestBuilder {
-        let mut req = client.post(format!("{}/responses", self.base_url)).json(body);
+        // Headers before `json()` (see `CompletionsHandler::request`): Codex
+        // rejects a doubled Content-Type with HTTP 400.
+        let mut req = client.post(format!("{}/responses", self.base_url));
         for (k, v) in self.request_headers(body, merged) {
             req = req.header(k, v);
         }
-        req
+        req.json(body)
     }
 
     fn usage_of(u: &Value) -> Usage {
@@ -1347,6 +1351,29 @@ mod tests {
 
     fn h(d: CompletionsDialect) -> CompletionsHandler {
         CompletionsHandler::new("m", "https://api.openai.com/v1", vec![], d)
+    }
+
+    fn content_types(req: &reqwest::Request) -> Vec<String> {
+        req.headers().get_all(reqwest::header::CONTENT_TYPE).iter().map(|v| v.to_str().unwrap().to_string()).collect()
+    }
+
+    /// ChatGPT's Codex backend rejects a doubled header with HTTP 400
+    /// "Unsupported content type"; `.json()` must not add a second one.
+    #[test]
+    fn codex_request_sends_one_content_type() {
+        let headers = vec![("Content-Type".into(), "application/json".into()), ("Authorization".into(), "Bearer t".into())];
+        let mut h = ResponsesHandler::new("m", "http://127.0.0.1:1", headers, false);
+        h.flavor = Flavor::Codex(Arc::new(CodexTurn { turn_state: Default::default(), supports_reasoning_summary: true }));
+        let req = h.request(&reqwest::Client::new(), &json!({"model": "m"}), &Kwargs::new()).build().unwrap();
+        assert_eq!(content_types(&req), vec!["application/json"]);
+    }
+
+    #[test]
+    fn completions_request_sends_one_content_type() {
+        let headers = vec![("Content-Type".into(), "application/json".into())];
+        let h = CompletionsHandler::new("m", "http://127.0.0.1:1", headers, CompletionsDialect::OpenAi);
+        let req = h.request(&reqwest::Client::new(), &json!({"model": "m"})).build().unwrap();
+        assert_eq!(content_types(&req), vec!["application/json"]);
     }
 
     #[test]

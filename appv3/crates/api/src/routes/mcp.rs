@@ -155,6 +155,7 @@ fn save_env_values(values: &[(String, String)]) -> std::io::Result<()> {
         if !seen.contains(k) {
             next.push(format!("{k}={}", quote_env(v)));
         }
+        appv3_core::env::mark_server_set(k);
         std::env::set_var(k, v);
     }
     appv3_core::secret_files::write_secret_file(&path, &(next.join("\n") + "\n"))

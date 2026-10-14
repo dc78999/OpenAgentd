@@ -506,10 +506,19 @@ async fn test_provider(AxPath(id): AxPath<String>, raw: Bytes) -> ApiResult<Resp
     let env_var = s(entry, "env_var");
     if !token.is_empty() && !env_var.is_empty() {
         saved.push((env_var.into(), std::env::var(env_var).ok()));
+    }
+    for (k, _) in &extra {
+        saved.push((k.clone(), std::env::var(k).ok()));
+    }
+    // Hide the candidate credential from shells spawned while the test runs.
+    // A variable the user already had stays theirs (it is restored after).
+    for (k, _) in saved.iter().filter(|(_, prev)| prev.is_none()) {
+        appv3_core::env::mark_server_set(k);
+    }
+    if !token.is_empty() && !env_var.is_empty() {
         std::env::set_var(env_var, &token);
     }
     for (k, val) in &extra {
-        saved.push((k.clone(), std::env::var(k).ok()));
         std::env::set_var(k, val);
     }
     let started = std::time::Instant::now();
@@ -618,6 +627,7 @@ async fn save_provider_named(id: String, raw: Bytes) -> ApiResult<Response> {
     write_env_credentials(&env_file, &creds).map_err(internal)?;
     let _ = rs::clear_provider_cached_models(&id);
     for (k, val) in &creds {
+        appv3_core::env::mark_server_set(k);
         if val.is_empty() {
             std::env::remove_var(k);
         } else {

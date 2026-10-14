@@ -23,9 +23,11 @@ const STREAM_INTERVAL: Duration = Duration::from_millis(500);
 const LIVE_MAX_CHARS: usize = 100_000;
 const LIVE_MAX_LINES: usize = 100;
 const LIVE_TRUNCATED: &str = "... [truncated live output] ...\n";
-/// Server-process variables that must never reach commands the agent or the
+/// Server auth variables that must never reach commands the agent or the
 /// user runs. `server serve` already drops them from its own environment;
-/// this also covers embedders that do not. v2 stripped its own Python/venv
+/// this also covers embedders that do not. Children are scrubbed with the
+/// wider [`appv3_core::env::child_env_blocklist`], which adds provider keys
+/// and other `.env` / API-saved values. v2 stripped its own Python/venv
 /// variables here; the native server sets none, so a user's venv passes
 /// through consistently with `PATH`.
 pub const LEAK_KEYS: &[&str] = &appv3_core::auth::CHILD_ENV_SECRETS;
@@ -376,7 +378,7 @@ fn format_exit_code(code: Option<i32>, signal: Option<i32>) -> String {
 }
 
 fn scrubbed_env(cmd: &mut tokio::process::Command) {
-    for k in LEAK_KEYS {
+    for k in appv3_core::env::child_env_blocklist() {
         cmd.env_remove(k);
     }
 }
@@ -396,8 +398,9 @@ async fn snapshot_argv(shell_bin: &str, command: &str) -> Option<Vec<String>> {
     let kind = snap::Kind::of(&shell_name_of(shell_bin))?;
     // v2's rc-sourcing prelude, so the snapshot sees what v2's shell sees.
     let prefix = build_argv(shell_bin, "").get(2)?.strip_suffix("eval \"$1\"")?.to_string();
+    let blocked = appv3_core::env::child_env_blocklist();
     let env: std::collections::HashMap<String, String> =
-        std::env::vars_os().filter_map(|(k, v)| Some((k.into_string().ok()?, v.into_string().ok()?))).filter(|(k, _)| !LEAK_KEYS.contains(&k.as_str())).collect();
+        std::env::vars_os().filter_map(|(k, v)| Some((k.into_string().ok()?, v.into_string().ok()?))).filter(|(k, _)| !blocked.contains(k)).collect();
     let dir = appv3_core::settings().cache_dir.join("shell-snapshots");
     let path = snapshot_cache().get(kind, shell_bin, &prefix, &env, LEAK_KEYS, &dir).await?;
     Some(snap::argv(kind, &path, command))

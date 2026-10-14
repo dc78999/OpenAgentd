@@ -178,7 +178,7 @@ pub fn create_session(workspace: &str, rows: i64, cols: i64) -> Result<Arc<Termi
         "cmd" => {}
         _ => cmd.arg("-i"),
     }
-    for k in appv3_tools::shell::LEAK_KEYS.iter().chain(IDENTITY_LEAK_KEYS.iter()) {
+    for k in appv3_core::env::child_env_blocklist().iter().map(String::as_str).chain(IDENTITY_LEAK_KEYS) {
         cmd.env_remove(k);
     }
     cmd.env("TERM", "xterm-256color");
